@@ -1,0 +1,108 @@
+---
+title: "Zastosowanie Prawa Stygnięcia Newtona w medycynie sądowej"
+author: "Jakub Sikorski 354584"
+date: "2026-06-09"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+header-includes:
+  - \renewcommand{\contentsname}{Spis treści}
+  - \usepackage[labelformat=empty]{caption}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev = "cairo_pdf")
+options(scipen = 999)
+```
+\newpage 
+
+***
+ 
+# **Wstęp i cel projektu**
+Celem projektu jest zaprezentowanie praktycznego zastosowania równań różniczkowych pierwszego rzędu w kryminalistyce. Model matematyczny oparty na Prawie Stygnięcia Newtona przy stałej temperaturze otoczenia pozwala na precyzyjne szacowanie czasu zgonu na podstawie pomiarów temperatury ciała oraz jego otoczenia.
+
+# **Model matematyczny**
+Zgodnie z Prawem Stygnięcia Newtona, szybkość zmiany temperatury ciała jest wprost proporcjonalna do różnicy między temperaturą tego ciała a temperaturą otoczenia. Zjawisko to można opisać równaniem różniczkowym:
+
+$$\frac{dT}{dt} = -k(T - T_R)$$
+
+gdzie:
+
+- $T$ - temperatura ciała
+- $T_R$ - stała temperatura otoczenia
+- $t$ - czas
+- $k$ - dodatnia stała stygnięcia
+
+Aby znaleźć funkcję opisującą temperaturę w czasie, rozwiązujemy równanie metodą rozdzielania zmiennych:
+
+$$\frac{dT}{T - T_R} = -k \, dt$$
+$$\int \frac{dT}{T - T_R} = \int -k \ dt$$
+$$\ln|T - T_R| = -kt + C$$
+
+Po nałożeniu funkcji wykładniczej obustronnie, otrzymujemy rozwiązanie ogólne:
+
+$$T(t) = T_R + D e^{-kt}$$
+
+Stałą $D$ wyznaczamy z warunku początkowego dla $t=0$. $T(0) = T_0$, skąd wynika, że $D = T_0 - T_R$. Rozwiązanie szczególne przyjmuje postać:
+
+$$T(t) = T_R + (T_0 - T_R)e^{-kt}$$
+
+# **Działanie w praktyce**
+O godzinie 6:00 rano śledczy odnajdują ciało w pokoju hotelowym. Przyjmujemy ten moment jako nasz czas $t = 0$. 
+Zebrano następujące dane:
+
+- Temperatura otoczenia jest stała i wynosi: $T_R =$ **20°C**.
+- Temperatura ciała w momencie znalezienia ($t = 0$): $T_0 =$ **31°C**.
+- Temperatura ciała po upływie jednej godziny ($t = 1$): $T_1 =$ **29°C**.
+- Zakładana temperatura ciała w chwili zgonu: $T_{zgon} =$ **36.6°C**.
+
+Poniższy skrypt wylicza stałą stygnięcia $k$, czas, jaki upłynął od momentu śmierci, oraz generuje wykres ukazujący spadek temperatury ciała w czasie.
+
+```{r, echo=TRUE}
+T_R <- 20
+T_0 <- 31
+T_1 <- 29
+T_zgon <- 36.6
+
+k <- -log((T_1 - T_R) / (T_0 - T_R))
+
+t_zgon <- -log((T_zgon - T_R) / (T_0 - T_R)) / k
+
+godziny_wstecz <- floor(abs(t_zgon))
+minuty_wstecz <- round((abs(t_zgon) - godziny_wstecz) * 60)
+
+cat("Stała stygnięcia k:", round(k,4))
+cat("Czas od zgonu:", godziny_wstecz, "godz.", minuty_wstecz, "min.")
+
+
+czas <- seq(t_zgon - 0.5, 4, by = 0.1)
+temperatura <- T_R + (T_0 - T_R) * exp(-k * czas)
+
+plot(czas, temperatura, type = "l", col = "blue", lwd = 2,
+     main = "Krzywa stygnięcia ciała (Model Newtona)",
+     xlab = "Czas od odnalezienia zwłok [godziny]",
+     ylab = "Temperatura ciała [°C]",
+     ylim = c(18, 38))
+
+abline(h = T_zgon, col = "red", lty = 2)
+abline(v = t_zgon, col = "red", lty = 2)
+
+points(c(0, 1), c(T_0, T_1), pch = 19, col = "black", cex = 1.2)
+
+text(0.3, 31.5, "Znalezienie ciała (6:00)", cex = 0.9)
+text(1.3, 29.5, "Pomiar kontrolny (7:00)", cex = 0.9)
+text(t_zgon - 0.15, 34, "Moment zgonu", col = "red", srt = 90, cex = 0.9)
+```  
+
+
+# **Wnioski i podsumowanie**  
+
+Z przeprowadzonych obliczeń wynika, że zgon nastąpił około 2 godzin i 3 minut przed odnalezieniem zwłok, co pozwala śledczym zawęzić czas morderstwa do godziny 3:57 rano. Należy zauważyć, że przedstawiony model jest pewnym uproszczeniem. W rzeczywistości stała $k$ może zmieniać się w czasie, a na proces stygnięcia wpływa wiele zmiennych czynników choćby temperatura otoczenia która w naszym modelu jest stała, gdzie tak naprawdę jest to rzadko spotykane zjawisko. Mimo to, proste równanie różniczkowe pierwszego rzędu stanowi fundament współczesnych, bardziej zaawansowanych algorytmów kryminalistycznych.  
+
+# **Bibliografia**  
+
+- [Wikipedia](https://pl.wikipedia.org/wiki/Prawo_stygnięcia)
+- [LaTeX](https://www.overleaf.com/learn)
+- Zastosowanie równań pierwszego rzędu - Lista 2 - Równania różniczkowe 1 (2025/26L)
