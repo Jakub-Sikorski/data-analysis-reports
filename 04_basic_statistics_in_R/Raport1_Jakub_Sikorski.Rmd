@@ -1,0 +1,448 @@
+---
+title: "Raport 1 - Podstawowe statystyki"
+author: "Jakub Sikorski 354584"
+date: "2026-03-11"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+header-includes:
+  - \renewcommand{\contentsname}{Spis treści}
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev = "cairo_pdf")
+```
+\newpage 
+
+ ***
+ 
+# **Wstęp**
+
+Celem raportu jest przeprowadzenie analizy statystycznej dwóch niezależnych zbiorów danych. Pierwsza część bazuje na danych ze szkoły w USA uwzględniających: oceny, iloraz inteligencji oraz wyniki w teście psychologicznym. Szczególną uwagę w tej części zwrócono na różnicę między płciami. Druga część opiera się na analizie danych o zarobkach mieszkańców USA w roku 2000, biorąc pod uwagę ich wykształcenie oraz płeć.
+
+# **Opis danych**
+```{r dane, echo=FALSE}
+grades <- read.table("grades.txt")
+income <- read.table("income.dat")
+colnames(grades) <- c("N","ŚrOc","IQ","Płeć","PH")
+grades$N <- NULL
+income$V1 <- NULL
+colnames(income) <- c('Wiek','Wykształcenie','Płeć','Roczne_zarobki','Sektor_zatrudnienia')
+
+```
+
+## Zbiór danych: Uczniowie (grades.txt)
+Zbiór ten obejmuje dane `r nrow(grades)` uczniów. W analizie wykorzystano: 
+
+* `r colnames(grades)[1]` - średnia ocen ucznia w skali 0-11 odpowiadająca kolejno ocenom: F, D-, D, D+, C-, C, C+, B-, B, B+, A-, A - zmienna ilościowa.
+* `r colnames(grades)[2]` - wynik testu na iloraz inteligencji - zmienna ilościowa.
+* `r colnames(grades)[3]` - płeć ucznia (M - chłopiec, F - dziewczynka) - zmienna jakościowa.  
+* `r colnames(grades)[4]` - wynik testu psychologicznego (Piers-Harris Children's Self-Concept Scale) - zmienna ilościowa.
+  
+\begin{center}
+Przykładowe obserwacje z danych o uczniach:
+\end{center}
+```{r head1, echo=FALSE}
+knitr::kable(head(grades),
+             align = "c")
+```
+## Zbiór danych: Zarobki w USA (income.dat)
+Zbiór ten obejmuje dane o `r nrow(income)` obserwacjach (mieszkańcach USA w 2000 roku). W analizie wykorzystano:  
+
+* Roczne zarobki - dochód mieszkańca - zmienna ilościowa.
+* Wykształcenie - poziom ukończonej edukacji - zmienna jakościowa.
+* Płeć - płeć danej osoby zakodowana liczbowo (1 - mężczyzna, 2 - kobieta) - zmienna jakościowa.
+* Dodatkowo w zbiorze znajdują się zmienne określające wiek oraz sektor zatrudnienia.  
+
+\newpage
+
+\begin{center}
+Przykładowe obserwacje z danych o zarobkach w USA na rok 2000:
+\end{center}
+```{r head2, echo=FALSE}
+knitr::kable(head(income),
+             align = "c")
+```
+
+\newpage 
+
+ ***
+
+# **Zadanie 1**  
+
+## a) Obliczenie wartości podstawowych statystyk dla zmiennych ilościowych
+
+\begin{center}
+Podstawowe statystyki - Uczniowie
+\end{center}
+
+```{r zad1a, echo=FALSE}
+gr <- grades$ŚrOc
+sv_g <- sd(gr)/mean(gr)
+ŚrOc <- round(c(mean(gr),median(gr),quantile(gr,0.25),quantile(gr,0.75),min(gr),max(gr),var(gr),sd(gr),sv_g),3)
+iq <- grades$IQ
+sv_i <- sd(iq)/mean(iq)
+IQ <- round(c(mean(iq),median(iq),quantile(iq,0.25),quantile(iq,0.75),min(iq),max(iq),var(iq),sd(iq),sv_i),3)
+ph <- grades$PH
+sv_p <- sd(ph)/mean(ph)
+PH <- round(c(mean(ph),median(ph),quantile(ph,0.25),quantile(ph,0.75),min(ph),max(ph),var(ph),sd(ph),sv_p),3)
+tabelka_1a <- data.frame(ŚrOc,IQ,PH)
+rownames(tabelka_1a) <- c("Średnia","Mediana","I Kwantyl","III Kwantyl","Minimum","Maksimum","Wariancja","Odchylenie stand.","Wsp. zmienności")
+knitr::kable(tabelka_1a, align = "c")
+```
+**Wnioski na podstawie statystyk opisowych**  
+Analizując powyższą tabelę wyciągnięto następujące wnioski dla poszczególnych zmiennych:  
+
+- **Zmienna ŚrOc (Średnia Ocen):**  
+  + **Tendencja centralna i skośność:** Średnia ocen w badanej grupie wynosi około 7.45. Warto zauważyć, że średnia (7.447) jest niższa od mediany (7.829). Wskazuje to na **lewostronną asymetrię** rozkładu - większość uczniów osiąga oceny wyższe, jednak pojedyncze bardzo słabe oceny (minimum to zaledwie 0.530) zaniżają ogólną średnią.  
+  + **Zróżnicowanie:** Zróżnicowanie ocen w grupie jest umiarkowane (współczynnik zmienności wynosi ok. 28.2%). Połowa badanych uczniów posiada ocenę mieszczącą się w przedziale od 6.278 do 8.983.  
+- **Zmienna IQ (Iloraz Inteligencji):**
+  + **Tendencja centralna i skośność:** Podobnie jak w przypadku ocen, mediana (110.000) jest wyższa od średniej arytmetycznej (108.923), co sugeruje delikatną **asymetrię lewostronną**.
+  + **Zróżnicowanie:** Iloraz inteligencji jest zmienną o najmniejszym zróżnicowaniu ze wszystkich badanych cech. Współczynnik zmienności wynosi zaledwie 12.1%. Oznacza to, że grupa jest bardzo jednorodna pod kątem IQ, a wyniki większości uczniów są zbliżone do średniej (połowa uczniów osiągnęła wynik w dość wąskim przedziale od 103.000 do 117.500).
+- **Zmienna PH (Test psychologiczny):**
+  + **Tendencja centralna i skośność:** Średni wynik testu psychologicznego to 56.962, jednak wartość środkowa (mediana) jest od niej zauważalnie wyższa i wynosi 59.500. Wskazuje to na wyraźną **lewostronną asymetrię** rozkładu. Podobnie jak w przypadku ocen, większość uczniów osiąga w teście psychologicznym wysokie wyniki (oscylujące wokół 60 punktów), ale ogólną średnią zaniżają jednostki o skrajnie niskim wyniku (minimum w grupie to 20.000, podczas gdy maksimum to 80.000).
+  + **Zróżnicowanie:** Wyniki tego testu charakteryzują się umiarkowanym poziomem zróżnicowania, ze współczynnikiem zmienności równym 21.8%. Środkowe 50% wyników mieści się w przedziale od 51.000 do 66.000 punktów.  
+
+## b) Histogramy i boxploty dla wszystkich zmiennych ilościowych
+```{r zad1b, echo=FALSE}
+par(mfrow=c(2,3))
+
+histsroc <- hist(gr,freq = F,col="pink",breaks=15,main="Histogram Ocen",xlab="Ocena",ylab="Gęstość")
+histiq <- hist(iq,freq = F,col="lightblue",breaks=15,main="Histogram IQ",xlab="Iloraz Inteligencji",ylab="Gęstość")
+histph <- hist(ph,freq = F,col="lightgreen",breaks=15,main="Histogram PH",xlab="Wartość PH",ylab="Gęstość")
+boxpltsroc <- boxplot(gr,col="pink",main="Wykres pudełkowy - Oceny",ylab="Ocena")
+boxpltiq <- boxplot(iq,col="lightblue",main="Wykres pudełkowy - IQ",ylab="IQ")
+boxpltph <- boxplot(ph,col="lightgreen",main="Wykres pudełkowy - PH",ylab="PH")
+```
+**Wnioski na podstawie analizy graficznej (histogramy i boxploty)**  
+Wizualizacja danych za pomocą wykresów potwierdza i uzupełnia wnioski płynące z analizy statystyk opisowych:
+
+- **Średnia Ocen (ŚrOc):**
+  + Na histogramie wyraźnie widać, że rozkład ocen jest wydłużony w lewą stronę, podczas gdy większość słupków (najwyższa gęstość) grupuje się po prawej stronie osi.
+  + Boxplot potwierdza tę lewostronną asymetrię, ale przede wszystkim ujawnia występowanie skrajnie niskich wartości odstających (outlierów). Pod dolnym wąsem wykresu pudełkowego wyraźnie widać punkty w okolicach zera (co pokrywa się z minimum 0.530). Oznacza to, że w klasie jest uczeń (lub uczniowie) o drastycznie niższych ocenach niż standardowy poziom grupy.
+- **Iloraz Inteligencji (IQ):**
+  + Histogram dla IQ wizualnie najbardziej przypomina rozkład normalny (Gaussa), z silną koncentracją wyników w okolicach 105-115 punktów. Potwierdza to najmniejsze zróżnicowanie tej zmiennej.
+  + Analiza wykresu pudełkowego pokazuje, że w grupie występuje dolna wartość odstająca, ale wbrew pozorom na górnym krańcu skali nie zaobserwowano outlierów. Oznacza to, że badana grupa ma niewielkie zróżnicowanie poza kilkoma danymi znacznie odbiegającymi IQ od reszty grupy (w przedziale 70-80 punktów).
+- **Test psychologiczny (PH):**
+  + Histogram ukazuje dość "płaski" i szeroki rozkład w środkowej części, co obrazuje duże zróżnicowanie wyników wewnątrz samej klasy.
+  + Analizując boxplot, możemy dostrzec, że środkowe 50% obserwacji znajduje się w górnej połowie skali, a dolny wąs ponownie jest zauważalnie dłuższy.
+  + Wykres ten ujawnia również istnienie co najmniej jednej skrajnie niskiej wartości odstającej (wynik w okolicach 20 punktów), która znacząco zaburza (zaniża) ogólną średnią arytmetyczną w tej klasie.  
+  
+## c) Porównanie danych statystycznych w zależności od płci  
+  
+\begin{center}
+Porównanie statystyk: Chłopcy (M) vs Dziewczęta (F):
+\end{center}
+```{r 1c1,echo=FALSE}
+chlopcy <- grades[grades$Płeć=="M",]
+dziewczynki <- grades[grades$Płeć=="F",]
+
+mgr <- chlopcy$ŚrOc
+msv_g <- sd(mgr)/mean(mgr)
+mSrOc <- round(c(mean(mgr),median(mgr),quantile(mgr,0.25),quantile(mgr,0.75),min(mgr),max(mgr),var(mgr),sd(mgr),msv_g),3)
+miq <- chlopcy$IQ
+msv_i <- sd(miq)/mean(miq)
+mIQ <- round(c(mean(miq),median(miq),quantile(miq,0.25),quantile(miq,0.75),min(miq),max(miq),var(miq),sd(miq),msv_i),3)
+mph <- chlopcy$PH
+msv_p <- sd(mph)/mean(mph)
+mPH <- round(c(mean(mph),median(mph),quantile(mph,0.25),quantile(mph,0.75),min(mph),max(mph),var(mph),sd(mph),msv_p),3)
+
+mtabelka <- data.frame(mSrOc,mIQ,mPH)
+rownames(mtabelka) <- c("Średnia","Mediana", "I Kwantyl", "III Kwantyl", "Minimum", "Maksimum", "Wariancja", "Odchylenie stand.","Wsp. zmienności")
+
+fgr <- dziewczynki$ŚrOc
+fsv_g <- sd(fgr)/mean(fgr)
+fSrOc <- round(c(mean(fgr),median(fgr),quantile(fgr,0.25),quantile(fgr,0.75),min(fgr),max(fgr),var(fgr),sd(fgr),fsv_g),3)
+fiq <- dziewczynki$IQ
+fsv_i <- sd(fiq)/mean(fiq)
+fIQ <- round(c(mean(fiq),median(fiq),quantile(fiq,0.25),quantile(fiq,0.75),min(fiq),max(fiq),var(fiq),sd(fiq),fsv_i),3)
+fph <- dziewczynki$PH
+fsv_p <- sd(fph)/mean(fph)
+fPH <- round(c(mean(fph),median(fph),quantile(fph,0.25),quantile(fph,0.75),min(fph),max(fph),var(fph),sd(fph),fsv_p),3)
+
+ftabelka <- data.frame(fSrOc,fIQ,fPH)
+rownames(ftabelka) <- c("Średnia","Mediana","I Kwantyl","III Kwantyl","Minimum","Maksimum","Wariancja","Odchylenie stand.","Wsp. zmienności")
+
+tabela_porownawcza <- cbind(mtabelka, ftabelka)
+
+colnames(tabela_porownawcza) <- c("ŚrOc (M)", "IQ (M)", "PH (M)", "ŚrOc (F)", "IQ (F)", "PH (F)")
+
+knitr::kable(tabela_porownawcza, 
+             align = "c")
+
+```
+**Wnioski na podstawie porównania płci (chłopcy vs dziewczęta)**  
+Zestawienie statystyk opisowych z podziałem na płeć pozwala zaobserwować interesujące różnice i podobieństwa między chłopcami a dziewczynkami w badanej próbie:  
+
+- **Średnia Ocen (ŚrOc):**
+  + Różnice w wynikach: Średnia arytmetyczna ocen dziewcząt (7.684) jest zauważalnie wyższa niż u chłopców (7.281). Co jednak niezwykle ciekawe, mediany w obu grupach są niemal identyczne (7.828 dla dziewcząt i 7.883 dla chłopców). Różnica w średnich wynika z faktu, że w grupie chłopców odnotowano drastycznie niższą ocenę minimalną (0.530), która silnie zaniżyła ich ogólny wynik. U dziewcząt najsłabsza ocena to 3.408. Z tego samego powodu oceny chłopców charakteryzują się znacznie większym zróżnicowaniem (współczynnik zmienności wynosi 32.2% w porównaniu do 22.0% u dziewcząt).
+- **Iloraz Inteligencji (IQ):**
+  + W badanej próbie to chłopcy osiągnęli wyższe wyniki w teście inteligencji. Zarówno ich średnia (111.348), jak i mediana (111.000) są o około 5-6 punktów wyższe niż analogiczne wskaźniki w grupie dziewcząt (kolejno 105.438 i 106.000). Obie grupy są wysoce jednorodne pod kątem IQ. Współczynnik zmienności dla chłopców wynosi zaledwie 10.7%, a dla dziewcząt 13.5%.
+- **Test psychologiczny (PH):**
+  + W przypadku tej zmiennej obserwujemy bardzo zbliżony poziom wyników oraz niemal identyczne, umiarkowane zróżnicowanie (współczynnik zmienności to ok. 21.4% dla chłopców i 22.5% dla dziewcząt). Ciekawie rozkłada się tu tendencja centralna: dziewczęta uzyskały nieznacznie wyższą medianę (60.000 vs 59.000), ale to chłopcy mają wyższą średnią arytmetyczną (57.848 vs 55.688). Jest to spowodowane tym, że maksymalny wynik osiągnięty przez chłopców (80.000) był wyższy od "sufitu" dziewcząt (72.000). Obie grupy posiadają jednak skrajnie słabe wyniki w okolicach 20-21 punktów, co u obu płci generuje lewostronną asymetrię rozkładu.
+
+
+```{r 1c2, echo=FALSE}
+par(mfrow=c(2,3))
+
+mhistsroc <- hist(mgr,freq = F,col="lightblue",breaks=15,main="Histogram Ocen Chłopców",xlab="Ocena",ylab="Gęstość",xlim = c(0,12),ylim = c(0,0.5))
+mhistiq <- hist(miq,freq = F,col="lightblue",breaks=15,main="Histogram IQ Chłopców",xlab="Iloraz Inteligencji",ylab="Gęstość",ylim = c(0,0.05),xlim=c(70,140))
+mhistph <- hist(mph,freq = F,col="lightblue",breaks=15,main="Histogram PH Chłopców",xlab="Wartość PH",ylab="Gęstość",ylim = c(0,0.05),xlim=c(20,80))
+
+fhistsroc <- hist(fgr,freq = F,col="pink",breaks=15,main="Histogram Ocen Dziewcząt",xlab="Ocena",ylab="Gęstość",xlim = c(0,12),ylim = c(0,0.5))
+fhistiq <- hist(fiq,freq = F,col="pink",breaks=15,main="Histogram IQ Dziewcząt",xlab="Iloraz Inteligencji",ylab="Gęstość",ylim = c(0,0.05),xlim=c(70,140))
+fhistph <- hist(fph,freq = F,col="pink",breaks=15,main="Histogram PH Dziewcząt",xlab="Wartość PH",ylab="Gęstość",ylim = c(0,0.05),xlim=c(20,80))
+
+```
+**Wnioski z analizy graficznej (porównanie histogramów)**  
+Zestawienie histogramów z ujednoliconymi osiami pozwala na bezpośrednie wizualne porównanie rozkładów cech w obu grupach:  
+
+- **Średnia Ocen (ŚrOc):**
+  + Wykresy wyraźnie obrazują różnicę w rozstępie ocen. U chłopców (górny lewy wykres) obserwujemy bardzo szeroki rozkład z małymi słupkami po lewej stronie (w okolicach 0-2), co potwierdza obecność skrajnie słabych wyników.
+  + Rozkład ocen dziewcząt (dolny lewy wykres) jest znacznie bardziej zwarty i "przesunięty" w prawą stronę. Całkowity brak słupków w przedziale 0-3 u dziewcząt wizualnie udowadnia, dlaczego ich ogólna średnia jest zauważalnie wyższa.
+
+- **Iloraz Inteligencji (IQ):**
+  + Porównując środkową kolumnę, widać, że cały rozkład słupków dla chłopców jest przesunięty nieco bardziej w prawo w porównaniu do grupy dziewcząt.
+  + U dziewcząt występuje bardzo silna koncentracja wyników – najwyższy słupek (dominanta/moda) znajduje się w okolicach 100-110 punktów. U chłopców wyniki pow. 110 punktów i więcej występują zauważalnie częściej, co tłumaczy ich wyższą średnią IQ.
+- **Test psychologiczny (PH):**
+  + Histogramy testu PH (prawa kolumna) pokazują duży rozstrzał wyników w obu grupach.
+  + Rozkład u chłopców wydaje się nieco bardziej płaski i sięga minimalnie wyższych wartości na prawej krawędzi osi. U dziewcząt wyniki wydają się odrobinę bardziej scentralizowane wokół wartości 60, z pojedynczymi odstępstwami w stronę niższych wyników.  
+
+  
+  
+\begin{center}
+Porównanie Dziewczęta vs Chłopcy na boxplot:
+\end{center}
+```{r 1c3,echo=FALSE}
+par(mfrow=c(1,3))
+
+boxplot(ŚrOc ~ Płeć, data = grades, col = c("pink", "lightblue"),
+        ylab = "Ocena", xlab = "Płeć", main = "Porównanie Ocen")
+
+
+boxplot(iq ~ Płeć, data = grades, col = c("pink","lightblue"),
+        ylab = "IQ", xlab = "Płeć", main = "Porównanie IQ")
+
+
+boxplot(ph ~ Płeć, data = grades, col = c("pink", "lightblue"),
+        ylab = "PH", xlab = "Płeć", main = "Porównanie PH")
+```
+**Wnioski z analizy graficznej (porównawcze wykresy pudełkowe)**  
+Zestawienie wykresów pudełkowych obok siebie dostarcza najbardziej przejrzystych informacji o różnicach w rozkładach badanych cech między płciami:  
+
+- **Średnia Ocen (ŚrOc):**
+  + Wykres ten jest doskonałym graficznym dowodem na to, co wynikało z tabeli statystyk. Środkowe 50% obserwacji oraz mediany znajdują się u obu płci na niemal identycznym poziomie.
+  + Zasadniczą różnicę widać jednak w długości dolnych "wąsów". U chłopców dolny wąs drastycznie ciągnie się w dół skali (aż do okolic 2), podczas gdy u dziewcząt kończy się na znacznie wyższym poziomie (powyżej 3). Udowadnia to, że "typowy" uczeń i "typowa" uczennica uczą się podobnie, ale to w grupie chłopców pojawiają się przypadki skrajnie słabe, które ciągną ich ogólną średnią w dół. W szczególności możemy zaobserwować jeden outlier leżący w okolicach zera.
+- **Iloraz Inteligencji (IQ):**
+  + Wykres pudełkowy dla IQ najwyraźniej ukazuje różnice między płciami. Cały boxplot dla chłopców jest widocznie przesunięty w górę osi Y względem wykresu dziewcząt.
+  + Zarówno mediana, jak i granice pierwszego oraz trzeciego kwartyla leżą u chłopców wyżej, co bezsprzecznie potwierdza ich wyższe wyniki w tym teście. Rozstęp wyników jest jednak u obu płci zbliżony, co świadczy o podobnym zróżnicowaniu wewnątrz obu grup.
+- **Test psychologiczny (PH):**
+  + Wykresy dla zmiennej PH są do siebie najbardziej zbliżone. Mediany i pudełka znajdują się na bardzo podobnych wysokościach, co świadczy o wyrównanym poziomie tej cechy.
+  + Uważna analiza pokazuje jednak, że rozkład wyników chłopców jest odrobinę szerszy – ich pudełko jest minimalnie wyższe, a górny wąs sięga maksymalnej wartości 80. Obie grupy posiadają bardzo długie dolne wąsy, co wizualnie potwierdza obecność pojedynczych, skrajnie niskich wyników w okolicach 30 punktów.  
+  
+## d) Porównanie liczby klas dla zmiennych ilościowych
+
+\begin{center}
+Porównanie histogramów średniej ocen dla różnych ilości słupków (breaks):
+\end{center}
+```{r 1d,echo=FALSE}
+par(mfrow = c(2,3))
+
+hist(gr,breaks = 2, main = "Breaks = 2",col = "yellow", xlim = c(0,12), ylim = c(0,70), xlab="Ocena", ylab="Częstość")
+hist(gr,breaks = 2^2, main = "Breaks = 2^2", col = "red", xlim = c(0,12), ylim = c(0,70), xlab="Ocena", ylab="Częstość")
+hist(gr,breaks = 2^3, main = "Breaks = 2^3", col = "darkred", xlim = c(0,12), ylim = c(0,70), xlab="Ocena", ylab="Częstość")
+hist(gr,breaks = 2^4, main = "Breaks = 2^4", col = "darkorchid", xlim = c(0,12), ylim = c(0,70), xlab="Ocena", ylab="Częstość")
+hist(gr,breaks = 2^5, main = "Breaks = 2^5", col = "cyan2", xlim = c(0,12), ylim = c(0,70), xlab="Ocena", ylab="Częstość")
+
+#z powodu zbyt dużego ściśnięcia histogramów dla mfrow = c(1,5) rozszerzyłem go do c(2,3) i aby nie zostawiać dziwnie wyglądającej pustej przestrzeni wstawiłem nadprogramowy, szósty histogram
+
+hist(gr,breaks = 2^6, main = "Breaks = 2^6", col = "chartreuse3", xlim = c(0,12), ylim = c(0,70), xlab="Ocena", ylab="Częstość")
+
+```
+**Wnioski: Wpływ liczby klas na kształt histogramu (Zmienna ŚrOc)**  
+Na podstawie wygenerowanego zestawienia sześciu histogramów o ujednoliconych osiach, można zaobserwować następujące zależności:  
+
+- Wybór **zbyt małej liczby klas** (Breaks = 2, kolor żółty) powoduje, że wykres staje się zbyt uogólniony. Cała struktura danych "zlewa się" w zaledwie dwa-trzy ogromne bloki, co powoduje utratę jakiejkolwiek wartości analitycznej – całkowicie ukrywa informacje o rzeczywistym kształcie rozkładu (jego lewostronnej asymetrii) oraz o obecności wartości skrajnych.
+- Wybór **zbyt dużej liczby klas** (Breaks = $2^5$ lub $2^6$, kolory jasnoniebieski i zielony) sprawia, że wykresy stają się nadmiernie pofragmentowane i "poszarpane". Z powodu bardzo wąskich przedziałów, do każdego z nich wpada zaledwie po kilka obserwacji, co przy ujednoliconej osi Y sprawia wrażenie, że rozkład staje się nienaturalnie płaski. Pojawia się wiele pustych klas, a wykres zaczyna obrazować pojedyncze obserwacje, zamiast ogólnej tendencji populacji.
+- **Optymalna liczba klas** powinna stanowić złoty środek – wygładzać pojedyncze obserwacje, ale jednocześnie zachowywać kluczowe cechy rozkładu. Analizując zestawienie, najbardziej optymalny wydaje się wykres Breaks = $2^3$ (8 przedziałów, kolor bordowy). W sposób płynny i czytelny ukazuje on lewostronną asymetrię ocen oraz główną koncentrację wyników. 
+
+\newpage 
+
+ ***
+# **Zadanie 2**
+ 
+## a) Opis struktury zarobków
+  
+Na podstawie przeprowadzonych obliczeń oraz wygenerowanych wykresów, strukturę dochodów mieszkańców USA można opisać w podziale na użyte narzędzia analityczne:
+ 
+```{r 2a1, echo = F}
+
+options(scipen=999)
+
+rz <- income$Roczne_zarobki
+sv_rz <- sd(rz)/mean(rz)
+Roczne_Zarobki <- round(c(mean(rz),median(rz),quantile(rz,0.25),quantile(rz,0.75),min(rz),max(rz),var(rz),sd(rz),sv_rz),3)
+tabelka_2a <- data.frame(Roczne_Zarobki)
+colnames(tabelka_2a) <- c("Roczne zarobki")
+rownames(tabelka_2a) <- c("Średnia","Mediana","I Kwantyl","III Kwantyl","Minimum","Maksimum","Wariancja","Odchylenie stand.","Wsp. zmienności")
+knitr::kable(tabelka_2a, align = "c")
+```
+**Wnioski z tabeli statystyk opisowych:**  
+
+- **Tendencja centralna i skośność:** Średnia arytmetyczna rocznych zarobków wynosi około 37 865 USD i jest zauważalnie wyższa od mediany (29 717 USD). Taka relacja, gdzie średnia jest "ciągnięta" w górę przez najwyższe wyniki, wskazuje na prawostronną asymetrię rozkładu. Oznacza to, że ponad połowa społeczeństwa zarabia poniżej średniej krajowej.
+- **Zróżnicowanie:** Dochody w badanej próbie charakteryzują się ogromnym zróżnicowaniem. Współczynnik zmienności wynosi blisko 95.5%, co oznacza, że odchylenie standardowe (ok. 36 158 USD) jest niemal równe samej średniej.
+- **Komentarz do ujemnych zarobków:** Tabela ujawnia występowanie zarobków ujemnych (wartość minimalna to -24 998 USD). W badaniach ekonomicznych jest to zjawisko naturalne i w pełni logiczne – ujemne dochody wykazują najczęściej osoby samozatrudnione (prowadzące własną działalność gospodarczą), które w danym roku poniosły stratę lub odnotowały straty z inwestycji kapitałowych.
+```{r 2a2, echo=F}
+par(mfrow = c(1,1))
+hist(rz,breaks = 70, xlim = c(0,450000), ylim = c(0,6000), col= "cornflowerblue", xlab = "Roczne zarobki [USD]", ylab = "Częstość", main = "Histogram rocznych zarobków")
+```
+  
+**Wnioski z analizy histogramu:**
+
+- **Wizualizacja asymetrii:** Histogram idealnie obrazuje prawostronną asymetrię, przyjmując postać rozkładu o bardzo długim, opadającym "ogonie" z prawej strony, ciągnącym się w wartości bardzo dalekie od dominanty.
+- **Struktura społeczeństwa:** Zdecydowana większość słupków o najwyższej gęstości grupuje się w lewej części wykresu. Pokazuje to graficznie, że "typowy" mieszkaniec USA osiągał w 2000 roku dochody w przedziale od ok. 15 000 do 45 000 USD. Długi ogon po prawej stronie udowadnia, że ogólna średnia jest sztucznie zawyżana przez bardzo nieliczną elitę o ekstremalnie wysokich zarobkach.
+```{r 2a3, echo=F}
+par(mfrow = c(1,2), mar = c(6, 6, 4, 2), mgp = c(4.5, 1, 0))
+boxplot(rz, main = "Boxplot z outlierami", las = 1, col = 'lightsteelblue', ylab = "Roczne zarobki [USD]")
+boxplot(rz,outline = F, main = "Boxplot bez outlierów", las = 1, col = "plum2", ylab = "Roczne zarobki [USD]")
+```
+**Wnioski z analizy wykresów pudełkowych:**  
+
+- **Kwestia czytelności i usunięcie outlierów:** Badana baza danych jest ogromna (blisko 56 tysięcy obserwacji), a w przypadku zarobków występuje w niej mnóstwo skrajnie wysokich wartości odstających (outlierów). Na lewym wykresie zlewają się one w jedną, długą, czarną linię, która drastycznie kompresuje właściwe "pudełko" i sprawia, że wykres staje się nieczytelny i bezużyteczny analitycznie. Z tego powodu do właściwego odczytu struktury dochodów posłużono się prawym wykresem (bez wartości skrajnych).
+- **Środkowe 50% obserwacji:** Prawy wykres pudełkowy pozwala precyzyjnie odczytać, że połowa typowych mieszkańców USA zarabia w przedziale od ok. 20 000 do 50 000 USD rocznie.
+- **Potwierdzenie kształtu:** Nawet po odrzuceniu ekstremalnych wartości z prawego wykresu, wyraźnie widać, że gruba linia mediany wewnątrz pudełka znajduje się bliżej jego dolnej krawędzi, a górny "wąs" jest nieco dłuższy. Stanowi to ostateczne graficzne potwierdzenie silnej, prawostronnej asymetrii zarobków w społeczeństwie amerykańskim.  
+
+## b) Porównanie zarobków w zależności od poziomu wykształcenia  
+Poniższe wykresy pudełkowe przedstawiają stosunek zarobków do poziomu wykształcenia:  
+
+```{r 2b1, echo=F}
+par(mfrow = c(1,1), mar = c(6, 6, 4, 2), mgp = c(4.5, 1, 0))
+
+etykiety = c("Podstawowe", "Niepełne\nŚrednie", "Średnie", "Niepełne\nWyższe", "Wyższe\n(Licencjat)", "Wyższe\n(Magister)")
+
+boxplot(Roczne_zarobki ~ Wykształcenie, data = income,
+        main = 'Z outlierami',
+        xlab = 'Wykształcenie',
+        ylab = 'Roczne zarobki [USD]',
+        col = 'springgreen',
+        names = etykiety,
+        las = 1,
+        cex.axis = 0.75)
+```
+
+**Komentarz do wyboru metody wizualizacji**  
+W celu poprawnego odczytania struktury zarobków w podziale na wykształcenie, konieczne było wygenerowanie wykresu pudełkowego z pominięciem wartości skrajnych (outlierów). Pierwszy wykres (zielony) wyraźnie ukazuje, że w każdej z badanych grup edukacyjnych istnieje olbrzymia liczba osób zarabiających kwoty drastycznie przewyższające średnią dla swojej grupy. Te wartości odstające zlewają się w ciągłe, czarne linie, które silnie "kompresują" właściwe pudełka w dół osi Y. Sprawia to, że wykres staje się nieczytelny i uniemożliwia rzetelne porównanie "typowych" zarobków reprezentantów poszczególnych szczebli edukacji. Z tego powodu do właściwej analizy posłużono się wyłącznie wykresem "bez outlierów" przedstawionym poniżej (pomarańczowy).
+
+
+```{r 2b2, echo=F}
+par(mfrow = c(1,1), mar = c(6, 6, 4, 2), mgp = c(4.5, 1, 0))
+boxplot(Roczne_zarobki ~ Wykształcenie, data = income,
+        main = 'Bez outlierów',
+        xlab = 'Wykształcenie',
+        ylab = 'Roczne zarobki [USD]',
+        col = 'tan1',
+        names = etykiety,
+        outline = FALSE,
+        las = 1,
+        cex.axis = 0.75)
+```
+**Wnioski z analizy zarobków względem wykształcenia**  
+Analiza wyselekcjonowanego wykresu pozwala zaobserwować wyraźny trend rosnący:
+
+- **Premia za edukację:** Wykres ukazuje bezsprzeczną, dodatnią korelację między poziomem wykształcenia a osiąganymi dochodami. Wraz z każdym wyższym stopniem edukacji rośnie zarówno mediana zarobków, jak i granice pierwszego oraz trzeciego kwartyla.
+- **Skokowy wzrost przy dyplomie uczelni wyższej:** Najbardziej drastyczny skok w zarobkach obserwujemy przy przejściu na szczebel edukacji wyższej. Różnica w zarobkach między osobami z wykształceniem podstawowym a średnim jest relatywnie niewielka. Natomiast uzyskanie dyplomu licencjata lub magistra powoduje znaczące "przesunięcie" całego pudełka w górę osi Y.
+- **Wzrost zróżnicowania:** Zjawiskiem równie ważnym co wzrost mediany jest wzrost zróżnicowania dochodów. Pudełka dla grup z wykształceniem podstawowym i średnim są "wąskie", co świadczy o tym, że dochody tych osób są bardzo spłaszczone i przewidywalne. Z kolei pudełka dla absolwentów z dyplomem wyższym (szczególnie na poziomie magistra) są znacznie "szersze", a ich górne i dolne wąsy rozciągają się na o wiele szerszej skali. Oznacza to, że sam dyplom magistra otwiera drogę do bardzo wysokich zarobków, ale nie gwarantuje ich w każdym przypadku (dolny wąs nadal sięga relatywnie niskich kwot).
+
+## c) Porównanie zarobków według płci
+  
+**Czy mężczyźni zarabiali więcej niż kobiety?**  
+
+```{r 2c1, echo=F}
+par(mfrow = c(1,1), mar = c(4, 6, 4, 2), mgp = c(4.5, 1, 0))
+boxplot(Roczne_zarobki ~ Płeć, data = income,
+        main = 'Porównanie rocznych zarobków w zależności od płci',
+        xlab = 'Płeć',
+        ylab = 'Roczne zarobki [USD]',
+        names = c('Mężczyźni','Kobiety'),
+        outline = F,
+        las = 1,
+        col = c("lightblue", "pink"))
+```
+*Komentarz metodologiczny: Podobnie jak wcześniej, wykres wygenerowano bez wartości skrajnych (outlierów), aby uniknąć spłaszczenia pudełek i zachować czytelność przy porównywaniu "typowych" zarobków.*  
+
+**Wnioski z wykresu pudełkowego:**  
+
+Na podstawie danych można jednoznacznie stwierdzić, że w USA w 2000 roku mężczyźni osiągali znacznie wyższe zarobki niż kobiety. Świadczą o tym trzy główne cechy rozkładu:
+
+- **Mediana:** Wartość środkowa u mężczyzn zbliża się do 40 000 USD, podczas gdy u kobiet wynosi nieco ponad 20 000 USD. Oznacza to, że "przeciętny" mężczyzna zarabiał niemal dwukrotnie więcej od kobiety.
+- **Przesunięcie rozkładu:** Całe pudełko mężczyzn leży wyraźnie wyżej na osi Y. Co więcej, I kwartyl u mężczyzn (dolna krawędź pudełka) pokrywa się z medianą u kobiet. Wynika z tego, że aż 75% mężczyzn zarabiało więcej, niż wynosił dochód połowy kobiet.
+- **Maksima (bez anomalii):** Górny wąs określający typowe zarobki maksymalne ulega u mężczyzn wydłużeniu i przekracza próg 100 000 USD, podczas gdy u kobiet kończy się już w okolicach 70 000 USD.
+
+```{r 2c2, echo=F}
+mezczyzni <- income[income$Płeć==1,]
+kobiety <- income[income$Płeć==2,]
+
+
+hist(mezczyzni$Roczne_zarobki, breaks = 100,
+     col = rgb(0,0,0,0.5),
+     xlim = c(-25000, 425000),
+     ylim = c(0,4000),
+     xlab = 'Roczne zarobki [USD]',
+     ylab = 'Liczba osób',
+     main = 'Porównanie rocznych zarobków w zależności od płci')
+
+hist(kobiety$Roczne_zarobki, breaks = 100,
+     add = T,
+     col = rgb(1,0,0,0.3))
+
+legend("topright",legend = c("Mężczyźni","Kobiety"),fill = c(rgb(0,0,0,0.5),rgb(1,0,0,0.3)))
+```
+**Wnioski z analizy histogramu:**  
+Nałożenie na siebie histogramów obu płci ujawnia kluczowe różnice w koncentracji zarobków, których nie było widać na wykresach pudełkowych:
+
+- **Ogromna koncentracja najniższych zarobków u kobiet:** Różowy rozkład kobiet posiada dominantę na początku skali. Oznacza to, że potężna część populacji kobiet osiąga bardzo podobne, najniższe zarobki (w przedziale do ok. 30 000 USD).
+- **"Gruby ogon" u mężczyzn:** Rozkład mężczyzn (szary) jest zauważalnie niższy na początku skali, co oznacza mniejszą koncentrację na najniższych stanowiskach. Zamiast tego tworzy on znacznie grubszy i dłuższy prawy "ogon". Wizualnie udowadnia to, że wśród osób zarabiających kwoty wysokie i ekstremalnie wysokie (powyżej 100 000 USD) występuje wyraźna dominacja mężczyzn.
+
+## d) Wyznaczenie "przeciętnych" zarobków mieszkańca USA
+  
+**Wybór miary "przeciętnych zarobków":**
+Jako najbardziej adekwatną miarę "przeciętnych" zarobków dla mieszkańców USA w 2000 roku przyjęto średnią ucinaną na poziomie 10% (10% trimmed mean).
+  
+**Argumentacja za wyborem średniej ucinanej**  
+Wybór ten podyktowany jest specyfiką rozkładu dochodów, co udowodniono w poprzednich punktach analizy:  
+
+- **Silna asymetria i wartości odstające:** Rozkład zarobków jest skrajnie prawostronnie asymetryczny. Występuje w nim nieliczna, ale drastycznie odbiegająca od reszty grupa osób o ekstremalnie wysokich dochodach, która sztucznie i bardzo mocno zawyża klasyczną średnią arytmetyczną.
+- **Anomalie na dole skali:** Z drugiej strony skali występują wartości ujemne (wynikające np. ze strat z tytułu samozatrudnienia), które również zaburzają ogólny obraz "typowego" pracownika.
+- **Złoty środek:** Zastosowanie 10-procentowej średniej ucinanej polega na odrzuceniu 10% obserwacji skrajnie niskich oraz 10% obserwacji skrajnie wysokich. Dzięki temu eliminujemy wpływ zarówno milionerów, jak i osób z głębokimi stratami finansowymi, a średnią wyliczamy z dochodów środkowych 80% populacji. Jest to rozwiązanie kompromisowe, które – w przeciwieństwie do mediany – uwzględnia faktyczne wartości liczbowe większości społeczeństwa, ale jest odporne na ekstrema.  
+  
+\begin{center}
+Porównanie miar przeciętnych dla rocznych zarobków w USA (2000 r.)
+\end{center}
+```{r 2d, echo=F}
+srednia_ucinana_rz <- mean(rz, trim = 0.1)
+
+srednia_rz <- mean(rz)
+
+mediana_rz <- median(rz)
+
+tabela1 <- data.frame(srednia_ucinana_rz,srednia_rz,mediana_rz)
+colnames(tabela1) <- c("Średnia ucinana (10%)", "Średnia arytmetyczna", "Mediana")
+row.names(tabela1) <- c("Wartość [USD]")
+knitr::kable(tabela1, align = "c")
+```
+**Porównanie z klasyczną średnią i medianą:**
+
+- **Średnia arytmetyczna** (ok. 37 865 USD) jest najwyższa z zestawienia. Nie reprezentuje ona "przeciętnego" Amerykanina, ponieważ jest silnie "ciągnięta" w górę przez najbogatszy ułamek społeczeństwa.
+- **Mediana** (29 717 USD) jest najniższa i dzieli społeczeństwo idealnie na pół. Jest to świetna miara, jednak całkowicie ignoruje ona rozkład wartości powyżej i poniżej punktu środkowego.
+- **Średnia ucinana 10%** plasuje się pomiędzy medianą a klasyczną średnią. Oczyszczona z ekstremów rzędu kilkuset tysięcy dolarów oraz wartości ujemnych, daje nam najbardziej realistyczny obraz tego, ile w 2000 roku zarabiał typowy przedstawiciel amerykańskiej klasy średniej i pracującej.  
+
+\newpage
+
+# **Bibliografia** 
+
+- Materiały z wykładów oraz skrypt
+- [Ulepszanie wykresów za pomocą dopasowanych kolorów](https://www.datanovia.com/en/blog/awesome-list-of-657-r-color-names/)
+- [Dokumentacja języka R](https://www.rdocumentation.org)
+- [Średnia ucinana](https://pl.wikipedia.org/wiki/Średnia_ucinana)
+
