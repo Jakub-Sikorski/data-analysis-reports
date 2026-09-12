@@ -1,0 +1,347 @@
+---
+title: "Raport 4 - Estymacja Przedziałowa"
+author: "Jakub Sikorski 354584"
+date: "2026-05-17"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+header-includes:
+  - \renewcommand{\contentsname}{Spis treści}
+  - \usepackage[labelformat=empty]{caption}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev = "cairo_pdf")
+options(scipen = 999)
+```
+\newpage 
+
+ ***
+ 
+ 
+# **Wstęp**
+
+Celem raportu jest praktyczne zbadanie zagadnienia estymacji przedziałowej oraz graficzne przedstawienie, jak zachowują się różne przedziały ufności w zależności od zadanych warunków. Raport podzielony jest na 3 zadania:  
+
+- Pierwsze skupia się na budowie przedziałów ufności dla wartości oczekiwanej oraz wariancji. Za pomocą symulacji danych z rozkładu normalnego oraz rozkładu t-Studenta sprawdzono, jak niespełnienie założenia o normalności danych wpływa na prawdopodobieństwo pokrycia prawdziwego parametru oraz jak oba przedziały reagują na zmianę wielkości próby.
+- Drugie dotyczy szacowania proporcji dla danych z rozkładu $B(1,\theta)$. Porównano w nim dwa podejścia: klasyczny przedział ufności oraz przedział Agrestiego-Coulla. Sprawdzono, jak obie metody radzą sobie w zależności od wielkości próby oraz przy skrajnych wartościach szacowanego prawdopodobieństwa.
+- Trzecie stanowi praktyczne zastosowanie poznanych metod na rzeczywistym, asymetrycznym zbiorze danych dotyczącym rocznych zarobków. Zbadano w niej, jak często wyznaczony przedział trafia w prawdziwą średnią dla całej populacji, oraz za pomocą narzędzi graficznych zweryfikowano w praktyce działanie Centralnego Twierdzenia Granicznego.  
+
+\newpage 
+
+***  
+ 
+# **Zadanie 1**
+
+W tym zadaniu skupiono się na wyznaczaniu klasycznych przedziałów ufności na poziomie 0.95 dla dwóch parametrów:  
+
+- Wartości oczekiwanej
+- Wariancji  
+W każdym z analizowanych przypadków doświadczenie powtórzono 1000 razy, aby oszacować faktyczne prawdopodobieństwo pokrycia prawdziwego parametru przez wyznaczony przedział. Zachowanie obu przedziałów zbadano dla danych pochodzących z rozkładu normalnego oraz rozkładu t-Studenta, porównując uzyskane wyniki dla różnych wielkości próby: $n = 10, 50, 200$.
+
+```{r zad1funkcje, echo=FALSE}
+ns <- c(10, 50, 200)
+alfa <- 0.05
+
+pokrycia_norm <- function(n, theta, sigma, N=1000){
+  prawdziwa_sr <- theta
+  prawdziwa_war <- sigma^2
+  t_kryt <- qt(1 - alfa/2, df = n - 1)
+  chi_975 <- qchisq(1 - alfa/2, df = n - 1)
+  chi_025 <- qchisq(alfa/2, df = n - 1)
+  
+  wyniki <- replicate(N, {
+    x <- rnorm(n, theta, sigma)
+    sr <- mean(x)
+    war <- var(x)
+    odch <- sd(x)
+    margines_sr <- t_kryt * (odch / sqrt(n))
+    sr_dol <- sr - margines_sr
+    sr_gora <- sr + margines_sr
+    
+    war_dol <- (n - 1) * war / chi_975
+    war_gora <- (n - 1) * war / chi_025
+    
+    czy_sr <- (sr_dol <= prawdziwa_sr & prawdziwa_sr <= sr_gora)
+    czy_war <- (war_dol <= prawdziwa_war & prawdziwa_war <= war_gora)
+    c(czy_sr, czy_war)
+  })
+  
+  return(c(Srednia = mean(wyniki[1,]), Wariancja = mean(wyniki[2,])))
+}
+
+pokrycia_t <- function(n, r, N=1000){
+  prawdziwa_sr <- 0
+  prawdziwa_war <- r / (r - 2)
+  
+  t_kryt <- qt(1 - alfa/2, df = n - 1)
+  chi_975 <- qchisq(1 - alfa/2, df = n - 1)
+  chi_025 <- qchisq(alfa/2, df = n - 1)
+  
+  wyniki <- replicate(N, {
+    x <- rt(n, df = r)
+    sr <- mean(x)
+    war <- var(x)
+    odch <- sd(x)
+    
+    margines_sr <- t_kryt * (odch / sqrt(n))
+    sr_dol <- sr - margines_sr
+    sr_gora <- sr + margines_sr
+    
+    war_dol <- (n - 1) * war / chi_975
+    war_gora <- (n - 1) * war / chi_025
+    
+    czy_sr <- (sr_dol <= prawdziwa_sr & prawdziwa_sr <= sr_gora)
+    czy_war <- (war_dol <= prawdziwa_war & prawdziwa_war <= war_gora)
+    
+    c(czy_sr, czy_war)
+  })
+  
+  return(c(Srednia = mean(wyniki[1,]), Wariancja = mean(wyniki[2,])))
+}
+```
+
+```{r zad1dane, echo=FALSE}
+wyniki_N_0_1 <- sapply(ns, function(n) pokrycia_norm(n, theta = 0, sigma = 1))
+wyniki_N_0_4 <- sapply(ns, function(n) pokrycia_norm(n, theta = 0, sigma = 2))
+
+wyniki_t_3  <- sapply(ns, function(n) pokrycia_t(n, r = 3))
+wyniki_t_10 <- sapply(ns, function(n) pokrycia_t(n, r = 10))
+wyniki_t_30 <- sapply(ns, function(n) pokrycia_t(n, r = 30))
+
+
+k_N1 <- "darkblue"
+k_N4 <- "deepskyblue"
+k_t3 <- "red"
+k_t10 <- "orange"
+k_t30 <- "darkgreen"
+```
+
+```{r zad1plot, echo=FALSE}
+par(mfrow = c(1, 2))
+
+plot(NULL, xlim = range(ns), ylim = c(0.8, 1), xaxt = "n",
+     xlab = "Wielkość próby", ylab = "Prawdopodobieństwo pokrycia",
+     main = "Pokrycie dla wartości\noczekiwanej")
+axis(1, at = ns, labels = ns)
+abline(h = 0.95, lty = 2, col = "black", lwd = 2)
+
+lines(ns, wyniki_N_0_1[1,], col = k_N1, lwd = 2)
+lines(ns, wyniki_N_0_4[1,], col = k_N4, lwd = 2)
+lines(ns, wyniki_t_3[1,], col = k_t3, lwd = 2, lty = 2)
+lines(ns, wyniki_t_10[1,], col = k_t10,lwd = 2, lty = 2)
+lines(ns, wyniki_t_30[1,], col = k_t30,lwd = 2, lty = 2)
+
+plot(NULL, xlim = range(ns), ylim = c(0, 1), xaxt = "n",
+     xlab = "Wielkość próby", ylab = "Prawdopodobieństwo pokrycia",
+     main = "Pokrycie dla wariancji")
+axis(1, at = ns, labels = ns)
+abline(h = 0.95, lty = 2, col = "black", lwd = 2)
+
+lines(ns, wyniki_N_0_1[2,], col = k_N1, lwd = 2)
+lines(ns, wyniki_N_0_4[2,], col = k_N4, lwd = 2)
+lines(ns, wyniki_t_3[2,], col = k_t3, lwd = 2, lty = 2)
+lines(ns, wyniki_t_10[2,], col = k_t10,lwd = 2, lty = 2)
+lines(ns, wyniki_t_30[2,], col = k_t30,lwd = 2, lty = 2)
+
+legend("bottomright", 
+       legend = c("N(0, 1)", "N(0, 4)", "t(3)", "t(10)", "t(30)"),
+       col = c(k_N1, k_N4, k_t3, k_t10, k_t30),
+       lty = c(1, 1, 2, 2, 2),
+       lwd = 2, cex = 0.8)
+```
+
+Na podstawie powyższych wykresów możemy wysnuć następujące wnioski:
+
+- Lewy wykres demonstruje, że niezależnie od tego, czy losujemy z rozkładu normalnego, czy z rozkładu t-Studenta, prawdopodobieństwo trafienia w prawdziwą wartość zawsze oscyluje bardzo blisko zakładanego poziomu 95%.
+- Na prawym wykresie sytuacja wygląda zupełnie inaczej. Klasyczny przedział ufności dla wariancji działa dobrze jedynie dla danych z rozkładu normalnego. Używając danych z rozkładu t-Studenta, wzór na wariancję całkowicie załamuje się. Najbardziej widoczna jest ta zależność na przykładzie rozkładu t(3), gdzie czerwona, przerywana linia zalicza gwałtowny spadek w dół.
+- Najważniejszą obserwacją jest to, że dla rozkładu t(3) zwiększanie liczby danych z n = 10 do n = 200 wcale nie pomoże, a wręcz odwrotnie, skuteczność przedziału dla wariancji z tego rozkładu znacząco spadnie.  
+
+Podsumowując, klasyczny przedział ufności dla średniej jest bardzo bezpiecznym narzędziem, natomiast przedział dla wariancji całkowicie psuje się w momencie, gdy nasze dane odstają od idealnego rozkładu normalnego.
+
+\newpage 
+
+ ***
+
+# **Zadanie 2**  
+W tym zadaniu skupiono się na wyznaczaniu przedziałów ufności dla proporcji, czyli prawdopodobieństwa sukcesu $\theta$ w rozkładzie $B(1, \theta)$.  
+W ramach symulacji porównano ze sobą skuteczność dwóch estymatorów:  
+
+- Klasycznego przedziału ufności
+- Przedziału ufności Agrestiego-Coulla  
+Doświadczenie oparto na 1000 powtórzeniach. Głównym celem analizy było zbadanie, jak rzeczywiste prawdopodobieństwo pokrycia nieznanego parametru przez oba przedziały zależy od jego prawdziwej wartości. Dodatkowo sprawdzono, jaki wpływ na wyniki ma zmiana wielkości badanej próby $n = 20, 50, 100$.  
+
+```{r zad2funkcje, echo=FALSE}
+theta <- seq(0.005,0.5,0.005)
+z <- 1.96
+
+pokrycia <- function(n, theta, N=1000){
+  sukcesy <- rbinom(N,n,theta)
+  p_1 <- sukcesy / n
+  margines <- z * sqrt((p_1 * (1 - p_1))/n)
+  gora_klas <- p_1 + margines
+  dol_klas <- p_1 - margines
+  
+  z_2 <- z^2
+  n_2 <- n+z_2
+  p_2 <- (sukcesy + z_2/2) / n_2
+  margines <- z * sqrt((p_2 * (1 - p_2))/n_2)
+  gora_ac <- p_2 + margines
+  dol_ac <- p_2 - margines
+  
+  pokrycie_klas <- mean(dol_klas <= theta & theta <= gora_klas)
+  pokrycie_ac <- mean(dol_ac <= theta & theta <= gora_ac)
+  return(c(Klasyczny = pokrycie_klas, Agresti_Coull = pokrycie_ac))
+}
+```
+
+```{r zad2plot, echo=FALSE}
+wyniki_n20  <- sapply(theta, function(t) pokrycia(20, t))
+wyniki_n50  <- sapply(theta, function(t) pokrycia(50, t))
+wyniki_n100 <- sapply(theta, function(t) pokrycia(100, t))
+
+plot(NULL, xlim = range(theta), ylim = c(0, 1),
+     xlab = "theta", ylab = "Prawdopodobieństwo pokrycia",
+     main = "Pokrycie przedziałów ufności")
+
+abline(h = 0.95, lty = 1, col = "black", lwd = 2)
+
+n20 = "blue"
+n50 = "hotpink"
+n100 = "green"
+lines(theta, wyniki_n20[1,],  type = "l", col = n20, lty = 1, lwd=2)
+lines(theta, wyniki_n50[1,],  type = "l", col = n50, lty = 1, lwd=2)
+lines(theta, wyniki_n100[1,], type = "l", col = n100, lty = 1, lwd=2)
+
+lines(theta, wyniki_n20[2,],  type = "l", col = n20, lty = 2, lwd=2)
+lines(theta, wyniki_n50[2,],  type = "l", col = n50, lty = 2,lwd=2)
+lines(theta, wyniki_n100[2,], type = "l", col = n100, lty = 2,lwd=2)
+
+legend("bottomright", 
+       legend = c("n = 20", "n = 50", "n = 100", "", "Klasyczny", "Agresti-Coulla"),
+       col = c(n20, n50, n100, NA, "black", "black"),
+       lty = c(1, 1, 1, NA, 1, 2),
+       cex = 0.85, ncol = 2,
+       lwd = c(2,2,2,NA,2,2))
+```
+Na podstawie powyższego wykresu wynikają następujące wnioski:  
+
+- Wykres demonstruje, że przedział Agrestiego-Coulla radzi sobie świetnie w każdych warunkach. Niezależnie od wielkości próby i wartości parametru $\theta$, prawdopodobieństwo "trafienia" w prawdziwą wartość zawsze oscyluje bardzo blisko zakładanego poziomu 0.95.
+- Sytuacja wygląda zupełnie inaczej w przypadku klasycznego przedziału ufności. Działa on stabilnie jedynie wtedy, gdy $\theta$ zbliża się do wartości 0.5. 
+- Kiedy badane prawdopodobieństwo jest bardzo małe, klasyczny wzór nie daje sobie rady. Najbardziej widoczna jest ta zależność na przykładzie małej próby $n = 20$, która dla małych $\theta$ zalicza najgwałtowniejszy spadek w dół.
+- Ważną obserwacją jest to, że zwiększanie liczby danych z $n = 20$ do $n = 100$ wyraźnie pomaga poprawić skuteczność metody klasycznej, jednak dla skrajnie małych wartości $\theta$ wciąż widać duży spadek.
+Podsumowując, przedział Agrestiego-Coulla jest bardzo bezpiecznym narzędziem do szacowania, natomiast klasyczny przedział ufności całkowicie zawodzi przy małych próbach i skrajnych prawdopodobieństwach, dlatego lepiej unikać go w takich sytuacjach.  
+
+\newpage 
+
+ ***
+
+# **Zadanie 3**  
+W tym zadaniu skupiono się na praktycznym zastosowaniu przedziałów ufności na rzeczywistym zbiorze danych "income.dat", dotyczącym rocznych zarobków.  
+Głównym celem analizy było skonstruowanie klasycznego przedziału ufności dla wartości oczekiwanej zarobków w całej populacji, a następnie weryfikacja jego rzeczywistej skuteczności na bazie 1000 powtórzeń doświadczenia.  
+Dodatkowo, wykorzystując analizę graficzną w postaci histogramów oraz Q-Q Plot, zbadano zbieżność rozkładu wyliczonych średnich z prób do rozkładu normalnego. Cały eksperyment przeprowadzono i porównano dla trzech różnych wielkości próby: $n = 50, 100, 200$, co pozwoliło w praktyce zaobserwować działanie Centralnego Twierdzenia Granicznego.  
+
+## a) Przedział ufności dla wartości oczekiwanej
+```{r zad3a, echo=FALSE}
+income <- read.table("income.dat")
+income$V1 <- NULL
+colnames(income) <- c('wiek','wyksztalcenie','plec','roczne_zarobki','sektor_zatrudnienia')
+zarobki <- income$roczne_zarobki
+
+prawdziwa_srednia <- mean(zarobki)
+
+n_a <- 100
+alfa <- 0.05
+proba_a <- sample(zarobki, n_a)
+sr_a <- mean(proba_a)
+odch_a <- sd(proba_a)
+t_kryt_a <- qt(1 - alfa/2, df = n_a - 1)
+margines_a <- t_kryt_a * (odch_a / sqrt(n_a))
+przedzial_a_dol <- sr_a - margines_a
+przedzial_a_gora <- sr_a + margines_a
+
+cat("Średnia w populacji:", prawdziwa_srednia, "\n")
+cat("Przedział ufności: [", przedzial_a_dol, ";", przedzial_a_gora, "]")
+```
+Jak widać, rzeczywista wartość oczekiwana bez problemu znalazła się wewnątrz wyznaczonego przez nas przedziału. Oznacza to, że w tym konkretnym losowaniu stu obserwacji, nasza metoda zadziałała w pełni poprawnie.
+
+## b) Powtórzenie doświadczenia 1000 razy
+```{r zad3b, echo=FALSE}
+analiza_zarobkow <- function(n, powtorzenia = 1000) {
+  alfa <- 0.05
+    wyniki <- replicate(powtorzenia, {
+    proba <- sample(zarobki, n)
+    sr <- mean(proba)
+    odch <- sd(proba)
+    t_kryt <- qt(1 - alfa/2, df = n - 1)
+    margines <- t_kryt * (odch / sqrt(n))
+    dol <- sr - margines
+    gora <- sr + margines
+    
+    czy_pokrywa <- (dol <= prawdziwa_srednia & prawdziwa_srednia <= gora)
+    c(srednia = sr, pokrycie = czy_pokrywa)
+  })
+  
+  wektor_srednich <- wyniki[1, ]
+  procent_pokrycia <- mean(wyniki[2, ])
+  return(list(srednie = wektor_srednich, pokrycie = procent_pokrycia))
+}
+
+wyniki_50  <- analiza_zarobkow(50)
+wyniki_100 <- analiza_zarobkow(100)
+wyniki_200 <- analiza_zarobkow(200)
+
+cat("Prawdopodobieństwo pokrycia dla n = 50: ", wyniki_50$pokrycie * 100, "% \n")
+cat("Prawdopodobieństwo pokrycia dla n = 100:", wyniki_100$pokrycie * 100, "% \n")
+cat("Prawdopodobieństwo pokrycia dla n = 200:", wyniki_200$pokrycie * 100, "% \n")
+```
+Zgodnie z teorią, zwiększenie wielkości próby pozytywnie wpływa na precyzję estymacji. Z wyliczonych wartości wynika, że dla najmniejszej próby prawdopodobieństwo pokrycia nie osiąga jeszcze idealnie zakładanego poziomu 95%. Jednak wraz ze wzrostem wielkości próby, odsetek ten stabilizuje się i zbliża do pożądanej wartości 0.95. Możemy też zauważyć, że różnica między $n = 100$, a $n = 200$ jest dużo mniejsza niż między $n = 50$, a $n = 100$.
+
+## c) Histogramy i Q-Q Plot
+```{r zad3c, echo=FALSE}
+par(mfrow = c(3, 2), mar = c(4, 4, 2, 1)) 
+
+zakres_srednich <- range(c(wyniki_50$srednie, wyniki_100$srednie, wyniki_200$srednie))
+zakres_y_hist <- c(0, 120)
+zakres_x_qq <- c(-3.5, 3.5)
+
+hist(wyniki_50$srednie, breaks = 30, col = "lightblue", 
+     main = "Histogram średnich (n=50)", xlab = "Średnia z próby",
+     xlim = zakres_srednich, ylim = zakres_y_hist)
+qqnorm(wyniki_50$srednie, main = "Q-Q Plot (n=50)",
+       xlim = zakres_x_qq, ylim = zakres_srednich)
+qqline(wyniki_50$srednie, col = "red", lwd = 2)
+
+hist(wyniki_100$srednie, breaks = 30, col = "lightgreen", 
+     main = "Histogram średnich (n=100)", xlab = "Średnia z próby",
+     xlim = zakres_srednich, ylim = zakres_y_hist)
+qqnorm(wyniki_100$srednie, main = "Q-Q Plot (n=100)",
+       xlim = zakres_x_qq, ylim = zakres_srednich)
+qqline(wyniki_100$srednie, col = "red", lwd = 2)
+
+hist(wyniki_200$srednie, breaks = 30, col = "lightcoral", 
+     main = "Histogram średnich (n=200)", xlab = "Średnia z próby",
+     xlim = zakres_srednich, ylim = zakres_y_hist)
+qqnorm(wyniki_200$srednie, main = "Q-Q Plot (n=200)",
+       xlim = zakres_x_qq, ylim = zakres_srednich)
+qqline(wyniki_200$srednie, col = "red", lwd = 2)
+
+```
+Na podstawie wygenerowanych histogramów oraz wykresów kwantylowo-kwantylowych możemy na własne oczy zaobserwować działanie Centralnego Twierdzenia Granicznego w praktyce:
+
+- Próba n = 50: Histogram zaczyna już przypominać dzwon, ale na wykresie Q-Q widać wyraźnie, że kropki na samych końcach odrywają się od czerwonej linii. Oznacza to, że asymetria zarobków wciąż ma tu lekki wpływ na nasze średnie.
+- Próby n = 100 i n = 200: Tutaj sytuacja znacząco się poprawia. Histogramy stają się bardziej symetryczne, a dla n = 200 punkty na wykresie Q-Q układają się już niemal idealnie wzdłuż czerwonej prostej. Stanowi to wizualny dowód na to, że rozkład średnich z prób bardzo mocno zbliżył się do idealnego rozkładu normalnego.  
+
+
+\newpage
+
+*** 
+
+
+# Bibliografia
+
+- Materiały z wykładów oraz skrypt
+- [Ulepszanie wykresów za pomocą dopasowanych kolorów](https://www.datanovia.com/en/blog/awesome-list-of-657-r-color-names/)
+- [Dokumentacja języka R](https://www.rdocumentation.org)
