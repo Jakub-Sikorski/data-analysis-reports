@@ -1,7 +1,7 @@
 # Statistical Theorems Simulation: LLN & CLT
 
 ## Project Description
-This project focuses on simulating and visually verifying two fundamental laws of mathematical statistics: the Law of Large Numbers (LLN) and the Central Limit Theorem (CLT)[cite: 13]. By combining theoretical probability experiments with real-world dataset applications, the report provides a hands-on demonstration of statistical convergence and sampling distributions. 
+This project focuses on simulating and visually verifying two fundamental laws of mathematical statistics: the Law of Large Numbers and the Central Limit Theorem. By combining theoretical probability experiments with real-world dataset applications, the report provides a hands-on demonstration of statistical convergence and sampling distributions. 
 
 ## Technologies Used
 * **R:** Core programming language for statistical computing and simulations.
