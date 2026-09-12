@@ -1,0 +1,534 @@
+---
+title: "Raport 3 - Estymatory Punktowe"
+author: "Jakub Sikorski 354584"
+date: "2026-04-27"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+header-includes:
+  - \renewcommand{\contentsname}{Spis treści}
+  - \usepackage[labelformat=empty]{caption}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev = "cairo_pdf")
+options(scipen = 999)
+```
+\newpage 
+
+ ***
+   
+# **Wstęp**
+
+Celem niniejszego raportu jest zbadanie własności wybranych estymatorów statystycznych oraz graficzne przedstawienie, jak zachowują się one w różnych warunkach. Analiza została podzielona na trzy główne części:  
+
+- Pierwsza część raportu skupia się na ocenie czterech różnych sposobów szacowania wartości oczekiwanej dla danych z rozkładu normalnego. Sprawdzono w niej, jak wielkość próby oraz zmiany samych parametrów rozkładu wpływają na obciążenie, wariancję i błąd średniokwadratowy poszczególnych estymatorów.
+
+- Druga część to praktyczny test na odporność estymatorów na wartości odstające. Na konkretnej symulacji zilustrowano, jak drastycznie załamują się wyniki klasycznej średniej, gdy do danych trafi jedna ekstremalna obserwacja, i udowodniono, dlaczego mediana jest w takich sytuacjach o wiele bezpieczniejszym narzędziem.
+
+- Trzecia, ostatnia część raportu dotyczy szacowania wariancji (rozrzutu danych). Porównano w niej jakość trzech różnych estymatorów wariancji, oceniając ich trafność, obciążenie oraz zachowanie wraz ze wzrostem liczby zebranych pomiarów.
+
+
+\newpage  
+
+***  
+
+# **Zadanie 1**
+```{r zad1funkcje, echo=FALSE}
+estymatory_zad1 <- function(n,t,s){
+  wyniki <- replicate(1000,{
+    x <- rnorm(n,t,s)
+    q1 <- mean(x)
+    q2 <- median(x)
+    q3 <- (quantile(x,0.25)+quantile(x,0.75))/2
+    q4 <- mean(x,trim = 0.1)
+    
+    c(q1,q2,q3,q4)
+  })
+  
+  wyniki <- t(wyniki)
+  colnames(wyniki) <- c("Średnia","Mediana","Śr. z kwartyli","Śr. obcięta")
+  return(wyniki)
+}
+
+boxploty_zad1 <- function(macierz,t,n){
+  boxplot(macierz, main = paste("Próba n =", n), 
+          col = 'lightblue', ylab = "Wartość estymatora",
+          las = 2, cex.axis = 0.8)
+  abline(h = t, col = "red", lwd = 2, lty = 2)
+}
+
+statystyki_zad1 <- function(macierz,t){
+  obciazenie <- colMeans(macierz) - t
+  wariancja <- apply(macierz,2,var)
+  mse <- colMeans((macierz - t)^2)
+  
+  tabelka <- data.frame(obciazenie,wariancja,mse)
+  colnames(tabelka) <- c("Obciążenie","Wariancja",'MSE')
+  return(tabelka)
+}
+```  
+
+W tym zadaniu skupiono się na porównaniu 4 estymatorów:  
+
+- Średniej
+- Mediany
+- Średniej z kwartyli
+- Średniej obciętej  
+
+W każdym podpunkcie porównano powyższe estymatory dla różnych wartości $\theta$ i $\sigma$ oraz dla różnych $n=10,50,200$.
+
+## a) $\theta = 0,  \sigma = 1$
+
+```{r zad1a, echo=FALSE}
+par(mfrow = c(1,3))
+m_zad1_a_10 <- estymatory_zad1(10, 0, 1)
+boxploty_zad1(m_zad1_a_10, 0, 10)
+
+m_zad1_a_50 <- estymatory_zad1(50, 0, 1)
+boxploty_zad1(m_zad1_a_50, 0, 50)
+
+m_zad1_a_200 <- estymatory_zad1(200, 0, 1)
+boxploty_zad1(m_zad1_a_200, 0, 200)
+
+t10 <- statystyki_zad1(m_zad1_a_10, 0)
+t50 <- statystyki_zad1(m_zad1_a_50, 0)
+t200 <- statystyki_zad1(m_zad1_a_200, 0)
+
+t10$Estymator <- rownames(t10)
+t50$Estymator <- rownames(t50)
+t200$Estymator <- rownames(t200)
+
+t10$n <- 10
+t50$n <- 50
+t200$n <- 200
+
+t_zbiorcza <- rbind(t10, t50, t200)
+
+t_zbiorcza <- t_zbiorcza[, c("n", "Estymator", "Obciążenie", "Wariancja", "MSE")]
+rownames(t_zbiorcza) <- NULL
+knitr::kable(t_zbiorcza, 
+             align = "c",
+             caption = "Porównanie parametrów estymatorów (theta = 0, sigma = 1)")
+```
+Powyższe wykresy pudełkowe oraz tabela wyników pozwalają na sformułowanie trzech kluczowych obserwacji dotyczących badanych estymatorów:  
+
+- Niezależnie od wybranego estymatora oraz wielkości próby (n), obciążenie dla każdego z nich oscyluje bardzo blisko zera. Potwierdza to również wizualna analiza wykresów - środek każdego "pudełka" idealnie pokrywa się z czerwoną, przerywaną linią wyznaczającą prawdziwą wartość parametru $\theta = 0$. Oznacza to, że wszystkie cztery metody poprawnie celują w środek rozkładu.
+- Zgodnie z teorią statystyki, wraz ze wzrostem zebranych danych rośnie dokładność estymacji. Przechodząc od n = 10, przez n = 50, aż do n = 200, wyraźnie widać drastyczne wizualne "kurczenie się" wykresów pudełkowych. Ma to bezpośrednie odzwierciedlenie w tabeli - wariancja oraz błąd średniokwadratowy dla każdego estymatora maleją w miarę powiększania próby.
+- Choć wszystkie narzędzia wyglądają na skuteczne, to mocno różnią się swoim rozrzutem. W przypadku idealnego rozkładu normalnego bez wartości odstających, absolutnym zwycięzcą jest klasyczna średnia arytmetyczna - charakteryzuje się ona najmniejszą wariancją oraz najniższym błędem MSE dla każdego badanego rozmiaru próby. Na drugim miejscu plasuje się średnia obcięta. Z kolei mediana wypada w tym zestawieniu najgorzej.  
+
+## b) $\theta = 0,  \sigma = 2$
+
+```{r zad1b, echo=FALSE}
+par(mfrow = c(1,3))
+m_zad1_b_10 <- estymatory_zad1(10, 0, 2)
+boxploty_zad1(m_zad1_b_10, 0, 10)
+
+m_zad1_b_50 <- estymatory_zad1(50, 0, 2)
+boxploty_zad1(m_zad1_b_50, 0, 50)
+
+m_zad1_b_200 <- estymatory_zad1(200, 0, 2)
+boxploty_zad1(m_zad1_b_200, 0, 200)
+
+t10 <- statystyki_zad1(m_zad1_b_10, 0)
+t50 <- statystyki_zad1(m_zad1_b_50, 0)
+t200 <- statystyki_zad1(m_zad1_b_200, 0)
+
+t10$Estymator <- rownames(t10)
+t50$Estymator <- rownames(t50)
+t200$Estymator <- rownames(t200)
+
+t10$n <- 10
+t50$n <- 50
+t200$n <- 200
+
+t_zbiorcza <- rbind(t10, t50, t200)
+
+t_zbiorcza <- t_zbiorcza[, c("n", "Estymator", "Obciążenie", "Wariancja", "MSE")]
+rownames(t_zbiorcza) <- NULL
+knitr::kable(t_zbiorcza, 
+             align = "c",
+             caption = "Porównanie parametrów estymatorów (theta = 0, sigma = 2)")
+```
+Analiza wyników dla przypadku (b) potwierdza główne prawidłowości zaobserwowane w poprzednim punkcie, uwypuklając jednocześnie wpływ większego rozrzutu oryginalnych danych na proces estymacji:  
+
+- Dwukrotne zwiększenie odchylenia standardowego populacji ($\sigma = 2$) nie wpłynęło na zdolność estymatorów do poprawnego wyznaczania środka rozkładu. Obciążenie wszystkich czterech metod nadal oscyluje na poziomie bliskim zeru, a "pudełka" na wykresach pozostają idealnie wyśrodkowane na czerwonej osi $\theta = 0$.
+- Najistotniejszą różnicą względem podpunktu (a) jest gwałtowny wzrost błędów. Wynika to wprost z praw matematyki - ponieważ odchylenie standardowe $\sigma$ wzrosło z 1 do 2, teoretyczna wariancja populacji wzrosła czterokrotnie ($\sigma^2 = 4$). Wartości wariancji i błędu średniokwadratowego dla każdego estymatora są w przybliżeniu cztery razy większe niż w poprzednim badaniu.
+- Nawet w warunkach większego "szumu" w danych, klasyczna średnia arytmetyczna pozostaje najefektywniejszym narzędziem estymacji (generuje najmniejsze pudełka i najniższe wartości MSE). Zwiększenie wielkości próby (od $n=10$ do $n=200$) wciąż skutecznie sprawia, że błędy dążą do zera, co jest klasycznym potwierdzeniem teorii statystycznej.
+
+## c) $\theta = 4,  \sigma = 1$
+
+```{r zad1c, echo=FALSE}
+par(mfrow = c(1,3))
+m_zad1_c_10 <- estymatory_zad1(10, 4, 1)
+boxploty_zad1(m_zad1_c_10, 4, 10)
+
+m_zad1_c_50 <- estymatory_zad1(50, 4, 1)
+boxploty_zad1(m_zad1_c_50, 4, 50)
+
+m_zad1_c_200 <- estymatory_zad1(200, 4, 1)
+boxploty_zad1(m_zad1_c_200, 4, 200)
+
+t10 <- statystyki_zad1(m_zad1_c_10, 4)
+t50 <- statystyki_zad1(m_zad1_c_50, 4)
+t200 <- statystyki_zad1(m_zad1_c_200, 4)
+
+t10$Estymator <- rownames(t10)
+t50$Estymator <- rownames(t50)
+t200$Estymator <- rownames(t200)
+
+t10$n <- 10
+t50$n <- 50
+t200$n <- 200
+
+t_zbiorcza <- rbind(t10, t50, t200)
+
+t_zbiorcza <- t_zbiorcza[, c("n", "Estymator", "Obciążenie", "Wariancja", "MSE")]
+rownames(t_zbiorcza) <- NULL
+knitr::kable(t_zbiorcza, 
+             align = "c",
+             caption = "Porównanie parametrów estymatorów (theta = 4, sigma = 1)")
+```
+Przypadek (c) to doskonały dowód na to, jak niezależne są od siebie parametry rozkładu. Z wykresów i tabeli płyną trzy proste wnioski:
+
+- Przesunięcie poszukiwanej wartości z 0 na 4 sprawiło jedynie, że całe wykresy powędrowały w górę. Estymatory natychmiast się do tego dostosowały - ich obciążenie znów wynosi ok. zera.
+- Wariancja i błędy MSE z tabeli są niemal identyczne jak te w podpunkcie (a). Potwierdza to ważną zasadę statystyczną: sama wartość oczekiwana ($\theta$) nie ma żadnego wpływu na wielkość błędu estymatora.
+- Hierarchia estymatorów jest niezmienna. Niezależnie od tego, gdzie leży środek, klasyczna średnia zawsze trafia w niego najcelniej.
+
+## d) $\theta = 4,  \sigma = 2$
+
+```{r zad1d, echo=FALSE}
+par(mfrow = c(1,3))
+m_zad1_d_10 <- estymatory_zad1(10, 4, 2)
+boxploty_zad1(m_zad1_d_10, 4, 10)
+
+m_zad1_d_50 <- estymatory_zad1(50, 4, 2)
+boxploty_zad1(m_zad1_d_50, 4, 50)
+
+m_zad1_d_200 <- estymatory_zad1(200, 4, 2)
+boxploty_zad1(m_zad1_d_200, 4, 200)
+
+t10 <- statystyki_zad1(m_zad1_d_10, 4)
+t50 <- statystyki_zad1(m_zad1_d_50, 4)
+t200 <- statystyki_zad1(m_zad1_d_200, 4)
+
+t10$Estymator <- rownames(t10)
+t50$Estymator <- rownames(t50)
+t200$Estymator <- rownames(t200)
+
+t10$n <- 10
+t50$n <- 50
+t200$n <- 200
+
+t_zbiorcza <- rbind(t10, t50, t200)
+
+t_zbiorcza <- t_zbiorcza[, c("n", "Estymator", "Obciążenie", "Wariancja", "MSE")]
+rownames(t_zbiorcza) <- NULL
+knitr::kable(t_zbiorcza, 
+             align = "c",
+             caption = "Porównanie parametrów estymatorów (theta = 4, sigma = 2)")
+```
+Ostatni przypadek stanowi ostateczne potwierdzenie reguł zaobserwowanych w poprzednich krokach:
+
+- Mimo dużego rozrzutu danych, wszystkie cztery narzędzia bezbłędnie namierzają nowy środek rozkładu. Obciążenie dla każdej wielkości próby pozostaje na poziomie bliskim zeru, co widać po idealnym nałożeniu się środków pudełek na czerwoną linię.
+- Zwiększenie odchylenia standardowego z 1 do 2 ponownie skutkuje (tak jak w podpunkcie b) około czterokrotnym wzrostem wariancji oraz błędu średniokwadratowego względem wyników z podpunktu (c).
+- Niezależnie od zmienionych wartości, hierarchia estymatorów pozostaje nienaruszona. Klasyczna średnia arytmetyczna utrzymuje pozycję lidera (najniższy błąd MSE), a powiększenie badanej próby do $n=200$ skutecznie obniża błędy wszystkich estymatorów niemal do zera.
+
+\newpage
+
+*** 
+
+
+# **Zadanie 2**
+
+To zadanie skupia się na ukazaniu różnicy między średnią arytmetyczną i medianą, gdy w doświadczeniu pojawiają się obserwacje odstające.
+
+```{r zad2a, echo=FALSE}
+n <- 1000
+k <- seq(from= 10, to = 100, by= 10)
+
+srednie <- matrix(0, nrow = n, ncol = length(k))
+mediany <- matrix(0, nrow = n, ncol = length(k))
+
+
+for(i in 1:length(k)){
+  aktualne_k <- k[i]
+  y <- rnorm(49)
+  wyniki <- replicate(n,{
+    proba <- c(rnorm(49),aktualne_k)
+    c(mean(proba), median(proba)) 
+  })
+  srednie[, i] <- wyniki[1, ]
+  mediany[, i] <- wyniki[2, ]
+}
+
+wartosc <- 0
+
+bias_sr <- apply(srednie,2,mean) - wartosc
+bias_med <- apply(mediany,2,mean) - wartosc
+
+var_sr <- apply(srednie,2,var)
+var_med <- apply(mediany,2,var)
+
+mse_sr <- bias_sr^2 + var_sr
+mse_med <- bias_med^2 + var_med
+
+par(mfrow = c(1,3))
+
+plot(k,bias_sr,type='o',ylim=range(c(bias_sr,bias_med)), main="Obciążenie", ylab="Bias")
+lines(k,bias_med,type='l',col='red')
+legend("topleft", legend=c("Średnia", "Mediana"), col=c("black", "red"), lty=1, bty="n")
+
+plot(k,var_sr,type='o',ylim=range(c(var_sr,var_med)), main="Wariancja", ylab="Var")
+lines(k,var_med,type='l',col='red')
+legend("topleft", legend=c("Średnia", "Mediana"), col=c("black", "red"), lty=1, bty="n")
+
+plot(k,mse_sr,type='o',ylim=range(c(mse_sr,mse_med)), main="MSE", ylab="MSE")
+lines(k,mse_med,type='l',col='red')
+legend("topleft", legend=c("Średnia", "Mediana"), col=c("black", "red"), lty=1, bty="n")
+```
+Wnioski z wykresów liniowych: 
+
+- **Obciążenie:** Zależność jest drastycznie różna dla obu estymatorów. Czerwona linia (mediana) leży płasko w okolicach zera, co oznacza, że ekstremalne wartości $k$ w ogóle jej nie zaburzają. Czarna linia (średnia) rośnie ostro i liniowo w górę - wartości odstające silnie ją obciążają.
+- **Wariancja:** Wariancja obu estymatorów jest stała i nie zależy od rosnącego $k$. Wynika to z faktu, że $k$ jest wartością stałą, która przesuwa wynik, ale nie zmienia jego rozrzutu. Warto jednak zauważyć, że wariancja mediany jest wyższa niż wariancja średniej, co jest matematyczną normą dla prób pochodzących z rozkładu normalnego.
+- **Błąd średniokwadratowy:** Ponieważ wariancja jest stała, o błędzie MSE decyduje obciążenie. Dla mediany błąd pozostaje niski i stały. Dla średniej MSE dosłownie rośnie nieliniowo w górę wraz ze wzrostem $k$, czyniąc ten estymator całkowicie bezużytecznym przy dużych wartościach odstających.
+
+
+```{r zad2b, echo=FALSE}
+par(mfrow = c(1, 2))
+
+colnames(srednie) <- paste0("k=", k)
+colnames(mediany) <- paste0("k=", k)
+
+boxplot(srednie, main="Średnia a obserwacja odstająca", col="lightblue", las=2)
+boxplot(mediany, main="Mediana a obserwacja odstająca", col="lightgreen", las=2)
+```
+Wnioski z wykresów pudełkowych:
+
+- **Wykres dla średniej:** Pudełka wraz ze wzrostem $k$ wędrują w górę, odrywając się od zera i dążąc za wartością odstającą. Co ciekawe, wysokość samych pudełek pozostaje taka sama, zmienia się wyłącznie ich położenie.
+- **Wykres dla mediany:** Wszystkie pudełka, od $k=10$ aż do $k=100$, stoją w  tym samym miejscu, idealnie wyśrodkowane na poziomie zera. Mediana kompletnie pomija, że na końcu próby znajduje się jakaś ekstremalnie duża liczba.
+  
+**Podsumowanie ogólne:** Doświadczenie dowodzi, że średnia arytmetyczna jest wysoce wrażliwa na wartości odstające. Z kolei mediana jest klasycznym estymatorem odpornym, którego należy używać zawsze wtedy, gdy podejrzewamy, że w naszych danych mogą znajdować się błędne lub ekstremalne pomiary.
+
+\newpage
+
+*** 
+
+# **Zadanie 3**
+
+```{r zad3funkcje, echo=FALSE}
+estymatory_zad3 <- function(n,t,s){
+  wyniki <- replicate(1000, {
+    x <- rnorm(n, t, s)
+    q1 <- var(x)
+    q2 <- sum((x - median(x))^2) / (n - 1)
+    q3 <- median((x - mean(x))^2)
+    c(q1, q2, q3)
+  })
+  wyniki <- t(wyniki)
+  colnames(wyniki) <- c("S^2", "Z medianą", "Mediana odchyleń")
+  return(wyniki)
+}
+
+boxploty_zad3 <- function(macierz,s,n){
+  prawdziwa_wariancja <- s^2
+  boxplot(macierz, main = paste("Próba n =", n),
+          col = 'lightgreen', ylab = "Wartość estymatora",
+          las = 2, cex.axis = 0.8)
+  abline(h = prawdziwa_wariancja, col = "red", lwd = 2, lty = 2)
+}
+
+statystyki_zad3 <- function(macierz, s){
+  prawdziwa_wariancja <- s^2
+  obciazenie <- colMeans(macierz) - prawdziwa_wariancja
+  wariancja <- apply(macierz, 2, var)
+  mse <- colMeans((macierz - prawdziwa_wariancja)^2)
+  tabelka <- data.frame(obciazenie, wariancja, mse)
+  colnames(tabelka) <- c("Obciążenie", "Wariancja", 'MSE')
+  return(tabelka)
+}
+
+```
+W tym zadaniu skupiono się na porównaniu 3 estymatorów:  
+
+- Wariancji ($S^2$)
+- Wariancji z mediany
+- Mediany kwadratów odchyleń 
+
+W każdym podpunkcie porównano powyższe estymatory dla różnych wartości $\theta$ i $\sigma$ oraz dla różnych $n=10,50,200$.
+
+## a) $\theta = 0,  \sigma = 1$
+
+```{r zad3a, echo=FALSE}
+par(mfrow = c(1,3))
+
+m_zad3_a_10 <- estymatory_zad3(10, 0, 1)
+boxploty_zad3(m_zad3_a_10, 1, 10)
+
+m_zad3_a_50 <- estymatory_zad3(50, 0, 1)
+boxploty_zad3(m_zad3_a_50, 1, 50)
+
+m_zad3_a_200 <- estymatory_zad3(200, 0, 1)
+boxploty_zad3(m_zad3_a_200, 1, 200)
+
+t10 <- statystyki_zad3(m_zad3_a_10, 1)
+t50 <- statystyki_zad3(m_zad3_a_50, 1)
+t200 <- statystyki_zad3(m_zad3_a_200, 1)
+
+t10$Estymator <- rownames(t10)
+t50$Estymator <- rownames(t50)
+t200$Estymator <- rownames(t200)
+
+t10$n <- 10
+t50$n <- 50
+t200$n <- 200
+
+t_zbiorcza <- rbind(t10, t50, t200)
+t_zbiorcza <- t_zbiorcza[, c("n", "Estymator", "Obciążenie", "Wariancja", "MSE")]
+rownames(t_zbiorcza) <- NULL
+
+knitr::kable(t_zbiorcza, 
+             align = "c",
+             caption = "Porównanie estymatorów wariancji (theta = 0, sigma = 1)")
+```
+Analiza wykresów pudełkowych oraz tabeli błędów uwydatnia wyraźny podział na estymatory skuteczne i silnie obciążone:
+
+- Klasyczna wariancja z próby ($S^2$) oraz jej wariant wykorzystujący medianę sprawdzają się w tym zadaniu doskonale. Ich pudełka są idealnie wyśrodkowane na czerwonej linii oznaczającej prawdziwą wariancję populacji. Tabela potwierdza ich nieobciążoność - błąd dla obu metod krąży bardzo blisko zera.
+- Estymator oparty na medianie kwadratów odchyleń wypada w tym zestawieniu drastycznie gorzej. Jak widać na wykresach, jego wyniki leżą daleko poniżej czerwonej osi. Potwierdza to tabela, wskazując na potężne, ujemne obciążenie (rzędu -0.5).
+- Zasada "im więcej danych, tym lepiej" sprawdza się w przypadku dwóch pierwszych estymatorów. Przejście z małej próby ($n=10$) do dużej ($n=200$) drastycznie zwęża pudełka na wykresach, co w tabeli widać jako radykalny spadek wariancji samego estymatora oraz jego błędu MSE. Niestety, w przypadku trzeciego estymatora zwiększenie próby nie zmienia jego błędnego wyniku.
+
+## b) $\theta = 0,  \sigma = 2$
+
+```{r zad3b, echo=FALSE}
+par(mfrow = c(1,3))
+
+m_zad3_b_10 <- estymatory_zad3(10, 0, 2)
+boxploty_zad3(m_zad3_b_10, 2, 10)
+
+m_zad3_b_50 <- estymatory_zad3(50, 0, 2)
+boxploty_zad3(m_zad3_b_50, 2, 50)
+
+m_zad3_b_200 <- estymatory_zad3(200, 0, 2)
+boxploty_zad3(m_zad3_b_200, 2, 200)
+
+t10_b <- statystyki_zad3(m_zad3_b_10, 2)
+t50_b <- statystyki_zad3(m_zad3_b_50, 2)
+t200_b <- statystyki_zad3(m_zad3_b_200, 2)
+
+t10_b$Estymator <- rownames(t10_b)
+t50_b$Estymator <- rownames(t50_b)
+t200_b$Estymator <- rownames(t200_b)
+
+t10_b$n <- 10
+t50_b$n <- 50
+t200_b$n <- 200
+
+t_zbiorcza_b <- rbind(t10_b, t50_b, t200_b)
+t_zbiorcza_b <- t_zbiorcza_b[, c("n", "Estymator", "Obciążenie", "Wariancja", "MSE")]
+rownames(t_zbiorcza_b) <- NULL
+
+knitr::kable(t_zbiorcza_b, 
+             align = "c",
+             caption = "Porównanie estymatorów wariancji (theta = 0, sigma = 2)")
+```
+
+Zwiększenie rozrzutu danych (odchylenie standardowe równe 2, co daje wariancję populacji równą 4) potwierdza wcześniejsze obserwacje, jednocześnie skalując wielkość popełnianych błędów:
+
+- Klasyczna wariancja z próby ($S^2$) oraz wariancja oparta na medianie zachowują swoją nieobciążoność. Na wykresach ich pudełka są precyzyjnie wyśrodkowane wokół wartości 4. Tabela dowodzi, że ich obciążenie wciąż jest minimalne, co czyni je wiarygodnymi narzędziami niezależnie od skali problemu.
+-  Mediana kwadratów odchyleń ponownie drastycznie zaniża wynik. Warto zauważyć, że ponieważ prawdziwa wariancja wzrosła czterokrotnie, obciążenie tego estymatora również wzrosło proporcjonalnie - z około -0.5 (w podpunkcie a) do ponad -2.1.
+- Zwiększanie liczby obserwacji znacząco poprawia precyzję dwóch pierwszych estymatorów, co widać po wyraźnym zwężeniu pudełek na wykresach i drastycznym spadku wariancji w tabeli. Jednakże w przypadku trzeciego estymatora duża próba wcale go nie naprawia - jego obciążenie pozostaje na stałym, bardzo wysokim poziomie.
+
+## c) $\theta = 4,  \sigma = 1$
+
+```{r zad3c, echo=FALSE}
+par(mfrow = c(1,3))
+
+m_zad3_c_10 <- estymatory_zad3(10, 4, 1)
+boxploty_zad3(m_zad3_c_10, 1, 10)
+
+m_zad3_c_50 <- estymatory_zad3(50, 4, 1)
+boxploty_zad3(m_zad3_c_50, 1, 50)
+
+m_zad3_c_200 <- estymatory_zad3(200, 4, 1)
+boxploty_zad3(m_zad3_c_200, 1, 200)
+
+t10_c <- statystyki_zad3(m_zad3_c_10, 1)
+t50_c <- statystyki_zad3(m_zad3_c_50, 1)
+t200_c <- statystyki_zad3(m_zad3_c_200, 1)
+
+t10_c$Estymator <- rownames(t10_c)
+t50_c$Estymator <- rownames(t50_c)
+t200_c$Estymator <- rownames(t200_c)
+
+t10_c$n <- 10
+t50_c$n <- 50
+t200_c$n <- 200
+
+t_zbiorcza_c <- rbind(t10_c, t50_c, t200_c)
+t_zbiorcza_c <- t_zbiorcza_c[, c("n", "Estymator", "Obciążenie", "Wariancja", "MSE")]
+rownames(t_zbiorcza_c) <- NULL
+
+knitr::kable(t_zbiorcza_c, 
+             align = "c",
+             caption = "Porównanie estymatorów wariancji (theta = 4, sigma = 1)")
+```
+Wyniki dla tego podpunktu są niemal identyczne jak w przypadku (a). Potwierdza to kluczową własność wariancji - jest ona miarą rozrzutu całkowicie niezależną od przesunięcia całego rozkładu.
+
+- Niezależność od średniej: Zmiana parametru $\theta$ z 0 na 4 nie wpłynęła na pracę estymatorów.
+- Klasyczna wariancja $S^2$ oraz wariancja z medianą pozostają estymatorami nieobciążonymi. Idealnie celują w prawdziwą wartość, a powiększanie badanej próby redukuje ich błąd średniokwadratowy niemal do zera.
+- Mediana kwadratów odchyleń po raz kolejny dowodzi swojej nieskuteczności jako bezpośredni estymator wariancji. Niezmiennie zaniża ona wynik o około 0.5, a wzrost wielkości próby w żaden sposób nie niweluje tego potężnego obciążenia.
+
+
+## d) $\theta = 4,  \sigma = 2$
+
+```{r zad3d, echo=FALSE}
+par(mfrow = c(1,3))
+
+m_zad3_d_10 <- estymatory_zad3(10, 4, 2)
+boxploty_zad3(m_zad3_d_10, 2, 10)
+
+m_zad3_d_50 <- estymatory_zad3(50, 4, 2)
+boxploty_zad3(m_zad3_d_50, 2, 50)
+
+m_zad3_d_200 <- estymatory_zad3(200, 4, 2)
+boxploty_zad3(m_zad3_d_200, 2, 200)
+
+t10_d <- statystyki_zad3(m_zad3_d_10, 2)
+t50_d <- statystyki_zad3(m_zad3_d_50, 2)
+t200_d <- statystyki_zad3(m_zad3_d_200, 2)
+
+t10_d$Estymator <- rownames(t10_d)
+t50_d$Estymator <- rownames(t50_d)
+t200_d$Estymator <- rownames(t200_d)
+
+t10_d$n <- 10
+t50_d$n <- 50
+t200_d$n <- 200
+
+t_zbiorcza_d <- rbind(t10_d, t50_d, t200_d)
+t_zbiorcza_d <- t_zbiorcza_d[, c("n", "Estymator", "Obciążenie", "Wariancja", "MSE")]
+rownames(t_zbiorcza_d) <- NULL
+
+knitr::kable(t_zbiorcza_d, 
+             align = "c",
+             caption = "Porównanie estymatorów wariancji (theta = 4, sigma = 2)")
+```
+
+Ostatni wariant symulacji łączy przesunięcie środka rozkładu ze zwiększonym rozrzutem danych. Wyniki stanowią ostateczne potwierdzenie wszystkich dotychczasowych obserwacji:
+
+- Tak jak w podpunkcie (c), przesunięcie parametru $\theta$ na 4 nie zaburzyło pracy estymatorów - miary rozrzutu są niezależne od położenia środka. Z kolei wyższe odchylenie standardowe sprawiło, że docelowa wariancja wyniosła 4, a błędy i rozrzut samych pudełek przeskalowały się dokładnie tak, jak w podpunkcie (b).
+- Wariancja z próby ($S^2$) oraz wariancja wykorzystująca medianę ostatecznie udowodniły swoją skuteczność. Są to estymatory nieobciążone. Tabela potwierdza, że powiększenie próby błyskawicznie kompresuje ich wariancję oraz błąd średniokwadratowy do ułamkowych wartości.
+- Mediana kwadratów odchyleń ostatecznie udowadnia swoją nieprzydatność w szacowaniu wariancji rozkładu normalnego. Co najważniejsze, zwiększanie liczby danych jedynie zwęża pudełko, ale w ogóle nie niweluje tego obciążenia.
+
+\newpage
+
+*** 
+
+
+# Bibliografia
+- Materiały z wykładów oraz skrypt
+- [Ulepszanie wykresów za pomocą dopasowanych kolorów](https://www.datanovia.com/en/blog/awesome-list-of-657-r-color-names/)
+- [Dokumentacja języka R](https://www.rdocumentation.org)
+- [Średnia ucinana](https://pl.wikipedia.org/wiki/Średnia_ucinana)
