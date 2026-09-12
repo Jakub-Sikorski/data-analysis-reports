@@ -1,0 +1,305 @@
+---
+title: "Raport 2 - Twierdzenie graniczne"
+author: "Jakub Sikorski 354584"
+date: "2026-03-31"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+header-includes:
+  - \renewcommand{\contentsname}{Spis treści}
+  - \usepackage[labelformat=empty]{caption}
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev = "cairo_pdf")
+options(scipen = 999)
+```
+\newpage 
+
+ ***
+   
+# **Wstęp**
+
+Celem niniejszego raportu jest zbadanie i graficzne przedstawienie dwóch fundamentalnych praw statystyki matematycznej: Prawa Wielkich Liczb oraz Centralnego Twierdzenia Granicznego. Analiza została podzielona na trzy główne części:  
+
+- Pierwsza część raportu opiera się na symulacji klasycznych doświadczeń losowych (rzut kostką oraz monetą) i ma na celu zilustrowanie działania Prawa Wielkich Liczb, ukazując zbieżność średniej pomiarów z próby do teoretycznej wartości oczekiwanej wraz ze wzrostem liczby prób.
+- Druga część skupia się na weryfikacji Centralnego Twierdzenia Granicznego. Za pomocą wielokrotnego próbkowania z rozkładów silnie asymetrycznych oraz dyskretnych zilustrowano, że rozkład standaryzowanej średniej próbkowej zbiega do standardowego rozkładu normalnego $N(0,1)$.
+- Trzecia, ostatnia część stanowi praktyczną aplikację poznanych twierdzeń na rzeczywistym zbiorze danych dotyczącym zarobków mieszkańców USA (income.dat). Przeanalizowano w niej szybkość zbieżności średniej oraz kształtu rozkładu próby dla parametrów całej populacji, a także zweryfikowano teoretyczne wzory na odchylenie standardowe średniej próbkowej.  
+
+\newpage  
+
+ ***  
+ 
+# **Zadanie 1**  
+  
+## a) Symulacja sześcienną kością  
+
+```{r zad1a, echo=FALSE}
+n <- seq(5,100,5)
+x <- c()
+
+for(i in 1:length(n)){
+  x[i] <- mean(sample(1:6,n[i],replace = T))
+}
+
+tabelka1a <- data.frame(n, x)
+colnames(tabelka1a) <- c("Rozmiar próby", "Średnia z próby")
+knitr::kable(tabelka1a, align = 'c', caption = "Średnie z n rzutów kostkami")
+```
+**Wnioski na podstawie statystyk opisowych**  
+
+Analizując otrzymane wyniki, można zaobserwować praktyczne działanie Prawa Wielkich Liczb. Dla małej liczby prób (np. przy $n = 5$ czy $n = 15$) średnia charakteryzuje się dużą zmiennością i potrafi prowadzić do zauważalnego odchylenia się od wartości teoretycznej. Wynika to z faktu, że przy małej liczbie rzutów, pojedyncze skrajne wyniki mają bardzo duży wpływ na ostateczną wartość średniej. Wraz ze stopniowym wzrostem liczby prób $n$, wariancja średniej maleje. Pojedyncze, skrajne rzuty są równoważone przez inne wyniki, przez co odchylenie od oczekiwanej wartości maleje. Zbliżając się do $n = 100$, średnia z próby wyraźnie się stabilizuje i zaczyna blisko oscylować wokół teoretycznej wartości 3.5, co potwierdza zbieżność do wartości oczekiwanej.  
+
+## b) Wizualne przedstawienie symulacji  
+
+```{r zad1b, echo=FALSE}
+plot(n,x, type = 'l',col='navy',lwd = 2,xlab = "Liczba rzutów (n)", ylab = "Średnia oczek na kostce")
+abline(h = 3.5,col='red',lwd = 2, lty = 2)
+```
+**Wnioski na podstawie analizy graficznej**  
+
+Powyższy wykres stanowi bezpośrednią, graficzną ilustrację działania Prawa Wielkich Liczb. Czerwona, przerywana prosta wyznacza teoretyczną wartość oczekiwaną dla rzutu symetryczną kostką sześcienną (równą 3.5). Granatowa łamana obrazuje natomiast zachowanie średniej próbkowej w zależności od liczby wykonanych rzutów.
+
+**Na wykresie bardzo wyraźnie zarysowują się dwa etapy:**
+
+- Faza dużej wariancji (lewa strona wykresu): Dla początkowych, małych wartości n, granatowa linia wykazuje duże oscylacje. Amplituda wahań jest wysoka, ponieważ przy zaledwie kilku rzutach, wylosowanie nawet jednej skrajnej wartości drastycznie przesuwa całą średnią.
+- Faza stabilizacji i zbieżności (prawa strona wykresu): Wraz ze wzrostem rozmiaru próby, wahania stają się coraz bardziej tłumione. Granatowa łamana wyraźnie "uspokaja się" i zaczyna być bliższa czerwonej osi teoretycznej.  
+
+Zjawisko to potwierdza podstawową tezę Prawa Wielkich Liczb: wraz ze wzrostem liczby niezależnych powtórzeń doświadczenia losowego, wariancja średniej maleje, a sama średnia z próby zbiega do prawdziwej wartości oczekiwanej rozkładu. Wykres dowodzi, że im większa próba badawcza, tym dokładniejszym estymatorem staje się jej średnia.
+
+## c) Symulacja i wizualizacja rzutów monetą
+```{r zad1c, echo=FALSE}
+y <- c()
+
+for(i in 1:length(n)){
+  y[i] <- mean(rbinom(n[i],100,0.5))
+}
+plot(n,y,type='l',col = 'darkgreen',xlab = "Liczba prób doświadczenia (n)",ylab="Średnia liczba orłów",lwd = 2)
+abline(h=50,col='red',lwd = 2,lty = 2)
+```
+**Wnioski na podstawie analizy graficznej**
+Powyższy wykres przedstawia weryfikację Prawa Wielkich Liczb dla doświadczenia opartego na rozkładzie dwumianowym $Bin(100, 0.5)$. Eksperyment polegał na zliczaniu orłów w 100 rzutach symetryczną monetą, powtarzanym $n$-krotnie. Zgodnie z rachunkiem prawdopodobieństwa, teoretyczna wartość oczekiwana liczby orłów w pojedynczym eksperymencie wynosi 50, co na wykresie symbolizuje czerwona, przerywana prosta.  
+Analiza wykresu prowadzi do analogicznych wniosków jak w przypadku rzutu kostką. Pomimo losowej natury pojedynczych rzutów, uśredniony wynik ze wszystkich prób oscyluje bardzo blisko wartości teoretycznej. Warto zwrócić uwagę na skalę osi Y - choć wizualnie łamana wydaje się dynamiczna, w rzeczywistości odchylenia dla większych prób zamykają się w niezwykle wąskim przedziale.  
+Otrzymany wynik jest ostatecznym, potwierdzeniem Prawa Wielkich Liczb w tym zadaniu. **Wraz ze wzrostem wielkości próby $n$, średnia arytmetyczna wyników dąży do wartości oczekiwanej badanej zmiennej losowej.**  
+
+\newpage
+
+***
+
+# **Zadanie 2**  
+
+## a) Rozkład wykładniczy $Exp(2)$
+
+
+```{r zad2a, echo=FALSE}
+n <- c(5,10,50,100)
+
+wart_oczekiwana <- 0.5
+tabela_wynikow <- data.frame()
+
+for(i in n){
+  proba <- rexp(i, rate = 2)
+  srednia <- mean(proba)
+  wariancja <- 0.25/i
+  tabela_wynikow <- rbind(tabela_wynikow, data.frame(
+    n = i,
+    Srednia_z_proby = srednia,
+    Wartość_oczekiwana_teor = wart_oczekiwana,
+    Wariancja_teor = wariancja
+  ))
+}
+colnames(tabela_wynikow) <- c("n","Średnia z próby","Wartość oczekiwana","Wariancja")
+knitr::kable(tabela_wynikow,align = 'c', caption = "Porównanie średniej z próby do teoretycznej wartości oczekiwanej dla różnych n")
+
+```
+**Wnioski na podstawie statystyk próbkowej i teoretycznej**  
+Analizując wygenerowaną tabelę, można zaobserwować zachowanie średniej próbkowej dla rozkładu wykładniczego w zależności od rosnącego rozmiaru próby $n$. Zestawienie wyników symulacji z wartościami teoretycznymi prowadzi do następujących wniosków:  
+
+- Zgodnie z własnościami rozkładu, teoretyczna wartość oczekiwana średniej próbkowej jest stała, niezależna od $n$ i wynosi w tym przypadku dokładnie $0.5$. Otrzymane z symulacji średnie oscylują blisko tej wartości.
+- Tabela wyraźnie ilustruje, że wraz ze wzrostem wielkości próby $n$, teoretyczna wariancja średniej maleje. Obserwowany spadek wariancji oznacza w praktyce, że dla większych prób średnia wyliczona z symulacji jest obarczona mniejszym błędem, co stanowi kolejne potwierdzenie Prawa Wielkich Liczb dla rozkładów asymetrycznych.  
+
+## b) Wizualne przedstawienie rozkładu dla doświadczenia powtarzanego 200 razy  
+
+```{r zad2b, echo=FALSE}
+par(mfrow = c(2,2))
+for(i in n){
+  srednie <- replicate(200,mean(rexp(i,rate=2)))
+  odchyl <- sqrt(0.25 / i)
+  Z <- (srednie - wart_oczekiwana) / odchyl
+  hist(Z, freq = F, col = 'lightblue',
+       main = paste("Histogram Z dla n=",i),
+       xlab = 'Z', ylab = "Gęstość",
+       ylim = c(0, 0.45), xlim = c(-4, 4))
+  curve(dnorm(x, mean = 0, sd = 1), add = T, col = 'red', lwd = 2)
+}
+
+
+```
+**Wnioski na podstawie analizy graficznej**  
+Powyższe wykresy stanowią bezpośrednią, graficzną weryfikację Centralnego Twierdzenia Granicznego. Zestawienie czterech histogramów pozwala zaobserwować ewolucję rozkładu standaryzowanej średniej próbkowej w zależności od wielkości próby $n$:  
+
+- Dla $n=5$ oraz $n=10$ rozkład jest zauważalnie prawoskośny i nie pokrywa się idealnie z czerwoną krzywą teoretyczną. Wynika to z faktu opisanego we wstępie, że bazowy rozkład wykładniczy jest silnie asymetryczny, przez co przy małych próbach asymetria ta wpływa na rozkład średniej.
+- Wraz ze wzrostem rozmiaru próby pierwotna asymetria zanika. Histogramy stopniowo przyjmują symetryczny kształt "dzwonu" i coraz precyzyjniej wpasowują się w czerwoną linię gęstości standardowego rozkładu normalnego $N(0,1)$.
+Obserwowane zjawisko potwierdza główne założenie Centralnego Twierdzenia Granicznego: niezależnie od kształtu rozkładu, z którego pochodzi próba, odpowiednio zestandaryzowana średnia arytmetyczna dąży w rozkładzie do standardowego rozkładu normalnego, co staje się coraz wyraźniejsze wraz ze wzrostem liczby prób.  
+  
+## c) Powtórzenie doświadczenia dla rozkładu $Pois(2)$  
+
+```{r zad2c1, echo = FALSE}
+n <- c(5,10,50,100)
+
+wart_oczekiwana_pois <- 2
+tabela_wynikow_pois <- data.frame()
+
+for(i in n){
+  proba <- rpois(i, lambda = 2)
+  srednia <- mean(proba)
+  wariancja_pois <- 2 / i
+  tabela_wynikow_pois <- rbind(tabela_wynikow_pois, data.frame(
+    n = i,
+    Srednia_z_proby = srednia,
+    Wartość_oczekiwana_teor = wart_oczekiwana_pois,
+    Wariancja_teor = wariancja_pois
+  ))
+}
+colnames(tabela_wynikow_pois) <- c("n","Średnia z próby","Wartość oczekiwana","Wariancja")
+knitr::kable(tabela_wynikow_pois, align = 'c', caption = "Porównanie średniej z próby do teoretycznej wartości oczekiwanej dla różnych n")
+```
+
+**Wnioski na podstawie statystyk opisowych**  
+Analiza wygenerowanej tabeli dla prób pobranych z rozkładu dyskretnego Poissona $Pois(2)$ prowadzi do wniosków spójnych z poprzednimi obserwacjami:
+
+- Teoretyczna wartość oczekiwana średniej próbkowej wynosi dokładnie $2$ (co wynika wprost z parametru $\lambda$) i jest niezależna od rozmiaru próby $n$. Wyliczone średnie oscylują wokół tej wartości.
+- Wraz ze wzrostem $n$, teoretyczna wariancja zauważalnie spada.
+- Podobnie jak w przypadku badanych wcześniej zmiennych, spadek wariancji przekłada się na większą precyzję średniej próbkowej dla większych $n$. **Stanowi to kolejne potwierdzenie Prawa Wielkich Liczb.**
+
+```{r zad2c2, echo=FALSE}
+par(mfrow = c(2,2))
+for(i in n){
+  srednie <- replicate(200,mean(rpois(i, lambda = 2)))
+  odchyl <- sqrt(2 / i)
+  Z <- (srednie - wart_oczekiwana_pois) / odchyl
+  hist(Z, freq = F, col = 'lightgreen',
+       main = paste("Histogram Z dla n=",i),
+       xlab = 'Z', ylab = "Gęstość", breaks = 15,
+       ylim = c(0,0.45), xlim = c(-4,4))
+  curve(dnorm(x, mean = 0, sd = 1), add = T, col = 'red', lwd = 2)
+}
+```
+
+**Wnioski na podstawie analizy graficznej**  
+Powyższe wykresy ilustrują działanie Centralnego Twierdzenia Granicznego. Zestawienie histogramów standaryzowanej średniej ukazuje następujące prawidłowości:
+
+- Na wykresach dla $n=5$ oraz $n=10$ widoczna jest "schodkowa" struktura z wyraźnymi odstępami. Jest to naturalny efekt skokowego charakteru bazowego rozkładu Poissona, który przy małych próbach nie ulega jeszcze pełnemu wygładzeniu.
+- Wraz ze wzrostem wielkości próby luki między słupkami znikają. Rozkład wyraźnie traci swój dyskretny charakter, nabiera ciągłego, "dzwonowatego" kształtu i zaczyna precyzyjniej pokrywać się z czerwoną linią gęstości standardowego rozkładu normalnego $N(0,1)$.
+- Obserwowane zjawisko stanowi silny dowód na uniwersalność Centralnego Twierdzenia Granicznego. Pokazuje ono, że nawet w sytuacji próbkowania z rozkładu skokowego, rozkład odpowiednio zestandaryzowanej średniej próbkowej zbiega do rozkładu ciągłego - rozkładu normalnego.
+
+\newpage
+
+***   
+
+# **Zadanie 3**
+
+## a) Porównanie średniej zarobków całej populacji i losowych prób
+
+```{r zad3a1, echo=FALSE}
+income <- read.table("income.dat")
+zarobki <- income[,5]
+
+n <- round(seq(from = 1, to = 55899, length.out = 100),0)
+srednie <- c()
+
+for(i in 1:length(n)){
+  x <- sample(zarobki,size = n[i], replace = F)
+  srednie[i] <- mean(x)
+}
+
+srednia_populacji <- mean(zarobki)
+
+n_do_tabelki <- c()
+srednie_do_tabelki <- c()
+for(i in 1:length(n)){
+  if(i%%10 == 0){
+    n_do_tabelki[i/10] <- n[i]
+    srednie_do_tabelki[i/10] <- srednie[i] 
+  }
+}
+
+
+tabelka_zarobkow <- data.frame(n_do_tabelki,srednie_do_tabelki,srednia_populacji,srednie_do_tabelki-srednia_populacji)
+
+colnames(tabelka_zarobkow) <- c("Rozmiar próby", "Średnia z próby", "Średnia populacji", "Różnica")
+knitr::kable(tabelka_zarobkow, align = 'c', caption = "Porównanie średnich zarobków")
+
+```
+**Wnioski na podstawie statystyk opisowych**  
+Zestawienie wyników w tabeli precyzyjnie liczbowo obrazuje proces zbiegania średniej próbkowej do rzeczywistej średniej populacji dla danych o zarobkach.  
+W kolumnie "Różnica" wyraźnie widać, że dla mniejszych prób błąd potrafi być zauważalny (a czasem wręcz ogromny). Wraz ze wzrostem rozmiaru próby, różnica ta ulega mocnej redukcji, spadając do rzędu zaledwie kilku jednostek dla bardzo dużych wartości $n$. Z uwagi na fakt, że próbkowanie przeprowadzono bez zwracania, dla maksymalnego rozmiaru próby estymator staje się równy parametrowi. Średnia z próby zrównuje się ze średnią populacji, a błąd wynosi dokładnie $0$, ponieważ próba objęła całą badaną populację.
+
+```{r zad3a2, echo=FALSE}
+par(mfrow = c(1,1))
+plot(n,srednie, type = 'l',col='navy',lwd = 2,xlab = "Rozmiar próby (n)", ylab = "Średnia zarobków",
+     ylim = c(36500,39000))
+abline(h = srednia_populacji,col='red',lwd = 2, lty = 2)
+```
+**Wnioski na podstawie analizy graficznej**    
+Wykres stanowi klasyczną, ilustrację Prawa Wielkich Liczb w odniesieniu do badanej, skończonej populacji.   Lewa strona wykresu charakteryzuje się dużą amplitudą wahań. Granatowa linia mocno odchyla się od średniej populacyjnej (czerwona przerywana linia). Jest to typowe dla danych zarobkowych, które z reguły są silnie prawoskośne - w małych próbach wylosowanie nielicznych osób o ekstremalnie wysokich dochodach drastycznie przesuwa całą średnią. Zbieżność do wartości rzeczywistej następuje w sposób typowy, tworząc kształt "lejka". Szacunkowa średnia stosunkowo szybko zbliża się do właściwego poziomu, jednak całkowite stłumienie wahań i pełna stabilizacja wymaga relatywnie dużej próby (wyraźne uspokojenie widać dopiero od około $n=40000$). Wykres udowadnia badane twierdzenie w praktyce: wraz ze stałym wzrostem liczebności próby, wpływ pojedynczych, odstających obserwacji maleje, a średnia arytmetyczna zarobków z próby zbiega do prawdziwej średniej populacji.
+
+## b) Wizualne porównanie zarobków prób o różnych wielkościach i całej populacji  
+```{r zad3b, echo=FALSE}
+par(mfrow = c(2,3))
+
+n_do_hist <- c(5,5^2,5^3,5^4,5^5,5^6)
+
+for(i in n_do_hist){
+  proba <- sample(zarobki, size = i, replace = F)
+  hist(zarobki, freq = FALSE, breaks = 50, col = rgb(1,0,0,0.2),
+       main = paste("Próba n =", i), 
+       xlab = "Zarobki", ylab = "Gęstość")
+  hist(proba, freq = FALSE, breaks = 50, col = rgb(0,0,0,0.6), add = TRUE)
+}
+```
+**Wnioski na podstawie analizy graficznej**  
+Powyższy panel wykresów obrazuje proces zbieżności rozkładu próby losowej do rzeczywistego rozkładu całej populacji. Jasnoróżowy histogram stanowi tło ilustrujące faktyczny, silnie prawoskośny rozkład zarobków w badanej zbiorowości, natomiast ciemne słupki reprezentują rozkład wylosowanej próby o rozmiarze $n$. Na podstawie wykresów można sformułować następujące wnioski:
+
+- Dla bardzo małych prób czarny histogram jest mocno poszarpany, ma wiele luk i w niewielkim stopniu przypomina rozkład populacji. Próby te są zbyt małe, aby poprawnie uchwycić asymetrię danych, a w szczególności rzadkie wartości skrajne. 
+- Wygładzanie i strukturalne dopasowanie: Wraz ze wzrostem rozmiaru próby, czarne słupki coraz szczelniej wypełniają jasnoróżowe tło. Próba zaczyna poprawnie reprezentować zarówno najliczniejszą klasę, jak i rzadsze obserwacje odstające. 
+- Na ostatnim wykresie ($n=15625$) oba histogramy pokrywają się niemal idealnie. Stanowi to praktyczną ilustrację tego, że zbiega nie tylko jej wartość oczekiwana (ukazana w poprzednim podpunkcie), ale cały kształt jej rozkładu wiernie odtwarza strukturę całej populacji.
+
+## c) Porównanie histogramów przy wielokrotnym próbkowaniu
+
+```{r zad3c, echo=FALSE}
+par(mfrow = c(2, 2))
+
+n_wartosci_c <- c(10, 50, 500, 5000)
+liczba_powtorzen <- 1000 
+sigma_populacji <- sd(zarobki)
+
+for(i in n_wartosci_c){
+  srednie_wielokrotne <- replicate(liczba_powtorzen, mean(sample(zarobki, size = i, replace = T)))
+  odchylenie_teor <- sigma_populacji / sqrt(i)
+  hist(srednie_wielokrotne, breaks = 30, col = 'cyan2',
+       xlim = c(20000, 60000), ylim = c(0,155),
+       main = paste("Rozkład średnich (n =", i, ")"),
+       xlab = "Wyliczone średnie z prób", ylab = "Częstość")
+  legend("topright", legend = paste("Teor. odchylenie: ", round(odchylenie_teor, 2)), 
+         bty = 'n', text.col = 'red')
+}
+```
+**Wnioski na podstawie analizy graficznej**  
+Powyższe histogramy ilustrują rozkład średniej próbkowej zarobków wygenerowany na podstawie wielokrotnego (tysiąckrotnego) losowania prób z populacji. W celu zbadania teoretycznych własności z użyciem klasycznego wzoru bez poprawek na skończoność, w tej części eksperymentu zastosowano losowanie ze zwracaniem. Zestawienie wyników dla różnych wielkości próby pozwala wyciągnąć kluczowe wnioski dotyczące precyzji:  
+
+- Sztywne ramy osi X doskonale obrazują spadek wariancji. Dla małych prób rozrzut średnich jest ogromny - poszczególne wyniki wahają się od $20 000$ do niemal $60 000$. Dla największej badanej próby cały rozkład jest niezwykle wąski i skupiony niemal punktowo wokół rzeczywistej średniej populacyjnej.
+- Wyliczone wartości w legendach w pełni pokrywają się z teorią matematyczną. Zgodnie ze wzorem, odchylenie standardowe średniej próbkowej wynosi $\frac{\sigma}{\sqrt{n}}$. Zależność tę doskonale widać przy przejściu z próby $n=50$ do $n=5000$ - stukrotny wzrost wielkości próby zaowocował dokładnie dziesięciokrotnym spadkiem teoretycznego odchylenia standardowego. Oznacza to, że aby dwukrotnie zwiększyć precyzję badania, należy pobrać czterokrotnie więcej obserwacji.
+
+\newpage
+
+***
+
+# **Bibliografia**
+
+- Materiały z wykładów oraz skrypt
+- [Ulepszanie wykresów za pomocą dopasowanych kolorów](https://www.datanovia.com/en/blog/awesome-list-of-657-r-color-names/)
+- [Dokumentacja języka R](https://www.rdocumentation.org)
+- [Centralne twierdzenie graniczne](https://pl.wikipedia.org/wiki/Centralne_twierdzenie_graniczne)
+- [Prawo wielkich liczb](https://pl.wikipedia.org/wiki/Prawo_wielkich_liczb)
