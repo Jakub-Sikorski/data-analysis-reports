@@ -1,0 +1,265 @@
+---
+title: "Raport 5 - Teoria testowania hipotez"
+author: "Jakub Sikorski 354584"
+date: "2026-06-10"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+header-includes:
+  - \renewcommand{\contentsname}{Spis treści}
+  - \usepackage[labelformat=empty]{caption}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev = "cairo_pdf")
+options(scipen = 999)
+library(car)
+
+```
+\newpage 
+
+ ***
+ 
+ 
+# **Wstęp**
+  
+Celem niniejszego raportu jest zapoznanie się z zagadnieniem testowania hipotez statystycznych. Praca została podzielona na dwie główne części: pierwsza z nich skupia się na symulacjach komputerowych i analizie teoretycznej, natomiast druga stanowi zastosowanie poznanych narzędzi na rzeczywistym zbiorze danych medycznych.  
+
+- W Zadaniu 1 zbadano własności testu dla wartości oczekiwanej przy znanej wariancji. Za pomocą wielokrotnych symulacji sprawdzono, jaki rozkład przyjmuje p-wartość w sytuacji, gdy prawdziwa jest $H_0$, a jaki, gdy prawdziwa jest $H_1$. Pozwoliło to na oszacowanie prawdopodobieństwa popełnienia błędu I rodzaju oraz wyznaczenie mocy testu.
+- W Zadaniu 2 teoria została sprawdzona w praktyce, biorąc pod lupę zbiór danych chol.txt. Wykorzystując analizę graficzną oraz test t-Welcha dla prób niezależnych, zweryfikowano, czy istnieją istotne statystycznie różnice w poziomie cholesterolu między pacjentami po zawale serca a zdrową grupą kontrolną. Dodatkowo porównano własną implementację matematyczną testu z wbudowaną funkcją $t.test()$, weryfikując poprawność przeprowadzonych obliczeń.
+
+\newpage 
+
+***  
+ 
+# **Zadanie 1**
+
+## a) Weryfikacja hipotezy zerowej dla próby z rozkładu $N(0, 4)$  
+
+```{r zad1a, echo=FALSE}
+n <- 50
+sd <- sqrt(4)
+mi <- 0
+x <- rnorm(n, mi ,sd)
+alfa <- 0.05
+
+z_stat_a <- mean(x) / (sd / sqrt(n))
+p_val_a <- 2 * (1 - pnorm(abs(z_stat_a)))
+
+cat("p-value:", p_val_a, "\n")
+cat("czy mamy podstawy do odrzucenia H_0?", p_val_a < alfa)
+```
+## b) Symulacja rozkładu p-wartości i oszacowanie błędu I rodzaju
+```{r zad1b, echo=FALSE}
+powtorzenia <- 1000
+
+symulacja_b <- replicate(powtorzenia,{
+  x <- rnorm(n, 0, sd)
+  z_stat <- mean(x) / (sd / sqrt(n))
+  2 * (1 - pnorm(abs(z_stat)))
+})
+
+
+liczba_odrzucen_b <- sum(symulacja_b < alfa)
+p_hat_b <- liczba_odrzucen_b / powtorzenia
+margines_b <- qnorm(1 - alfa/2) * sqrt((p_hat_b * (1 - p_hat_b)) / powtorzenia)
+przedzial_b <- c(p_hat_b - margines_b, p_hat_b + margines_b)
+
+cat("prawdopodobieństwo błędu I rodzaju:", p_hat_b, "\n")
+cat("przedział ufności: [", przedzial_b[1], ",", przedzial_b[2], "]")
+
+par(mfrow = c(1, 2))
+
+hist(symulacja_b, breaks = 20, col = "lightblue", probability = T, 
+     main = "Histogram p-wartości", xlab = "p-value")
+abline(h = 1, col = "red", lwd = 2, lty = 2)
+
+qqPlot(symulacja_b, distribution = "unif", 
+       main = "Q-Q Plot", 
+       xlab = "Kwantyle teoretyczne", ylab = "Kwantyle z próby",
+       col = "black", col.lines = "red", id = F) 
+```
+Wnioski do a) i b):
+W tej części symulacji dane pochodziły z rozkładu $N(0, 4)$, co oznacza, że zakładana w teście hipoteza zerowa ($H_0: \mu = 0$) była w rzeczywistości prawdziwa.  
+
+- Jak wyraźnie widać na histogramie, wyliczone p-wartości z 1000 powtórzeń charakteryzują się rozkładem jednostajnym na przedziale (0, 1). Histogram jest stosunkowo płaski, a punkty na wykresie Q-Q układają się wzdłuż czerwonej prostej teoretycznej.
+- Oszacowane prawdopodobieństwo popełnienia błędu I rodzaju oscyluje wokół wartości 0.05, co pokrywa się z narzuconym przez nas poziomem istotności $\alpha = 0.05$.
+
+## c) Weryfikacja hipotezy zerowej dla próby z rozkładu $N(0.3, 4)$
+
+```{r zad1c, echo=FALSE}
+n <- 50
+mi <- 0.3
+sd <- sqrt(4)
+
+x <- rnorm(n, mi ,sd)
+alfa <- 0.05
+
+z_stat_c <- mean(x) / (sd / sqrt(n))
+p_val_c <- 2 * (1 - pnorm(abs(z_stat_c)))
+
+cat("p-value:", p_val_c, "\n")
+cat("czy mamy podstawy do odrzucenia H_0?", p_val_c < alfa)
+```  
+
+## d) Symulacja rozkładu p-wartości i oszacowanie mocy testu  
+
+```{r zad1d, echo=FALSE}
+powtorzenia <- 1000
+
+symulacja_d <- replicate(powtorzenia,{
+  x <- rnorm(n, mi, sd)
+  z_stat <- mean(x) / (sd / sqrt(n))
+  2 * (1 - pnorm(abs(z_stat)))
+})
+
+
+liczba_odrzucen_d <- sum(symulacja_d < alfa)
+p_hat_d <- liczba_odrzucen_d / powtorzenia
+margines_d <- qnorm(1 - alfa/2) * sqrt((p_hat_d * (1 - p_hat_d)) / powtorzenia)
+przedzial_d <- c(p_hat_d - margines_d, p_hat_d + margines_d)
+
+cat("oszacowana moc testu:", p_hat_d, "\n")
+cat("przedział ufności dla mocy: [", przedzial_d[1], ",", przedzial_d[2], "]\n\n")
+
+par(mfrow = c(1, 2))
+
+hist(symulacja_d, breaks = 20, col = "lightblue", probability = T, 
+     main = "Histogram p-wartości", xlab = "p-value")
+abline(h = 1, col = "red", lwd = 2, lty = 2)
+
+qqPlot(symulacja_d, distribution = "unif", 
+       main = "Q-Q Plot", 
+       xlab = "Kwantyle teoretyczne", ylab = "Kwantyle z próby",
+       col = "black", col.lines = "red", id = F) 
+```
+Wnioski do c) i d):  
+W tym przypadku zbadaliśmy sytuację, w której dane pochodziły z rozkładu $N(0.3, 4)$. Prawdziwa była zatem hipoteza $H_1$, a odrzucenie $H_0$ było decyzją poprawną.
+
+- Rozkład p-wartości drastycznie różni się od tego z podpunktu (b). Przestaje być jednostajny - staje się silnie skośny, a większość wyników grupuje się w okolicach zera. Na wykresie Q-Q kropki całkowicie odrywają się od czerwonej prostej.
+
+## e) Analityczna zależność mocy testu od parametrów $\mu_1$, $n$ oraz $\sigma^2$
+
+```{r zad1e, echo=FALSE}
+moc_testu_Z <- function(mu_1, n, sigma, alfa = 0.05){
+  z_kryt <- qnorm(1 - alfa / 2)
+  odchylenie_standardowe_sredniej <- sigma / sqrt(n)
+  moc <- pnorm(-z_kryt - mu_1 / odchylenie_standardowe_sredniej) + 
+    (1 - pnorm(z_kryt - mu_1 / odchylenie_standardowe_sredniej))
+  return(moc)
+}
+
+par(mfrow = c(3, 1), mar = c(4.5, 4.5, 2, 1))
+
+
+mu_seq <- seq(-1.5, 1.5, length.out = 200)
+moc_od_mu <- moc_testu_Z(mu_1 = mu_seq, n = 50, sigma = 2)
+
+plot(mu_seq, moc_od_mu, type = "l", col = "blue", lwd = 2,
+     main = expression(paste("Moc testu w zależności od ", mu[1], " (przy n = 50, ", sigma^2, " = 4)")),
+     xlab = expression(mu[1]), ylab = "Moc testu", ylim = c(0, 1))
+abline(h = 0.05, lty = 2, col = "red")
+
+
+n_seq <- seq(10, 400, by = 1)
+moc_od_n <- moc_testu_Z(mu_1 = 0.3, n = n_seq, sigma = 2)
+
+plot(n_seq, moc_od_n, type = "l", col = "darkgreen", lwd = 2,
+     main = expression(paste("Moc testu w zależności od wielkości próby n (przy ", mu[1], " = 0.3, ", sigma^2, " = 4)")),
+     xlab = "Wielkość próby (n)", ylab = "Moc testu", ylim = c(0, 1))
+
+
+wariancja_seq <- seq(1, 15, length.out = 200)
+moc_od_wariancji <- moc_testu_Z(mu_1 = 0.3, n = 50, sigma = sqrt(wariancja_seq))
+
+plot(wariancja_seq, moc_od_wariancji, type = "l", col = "red", lwd = 2,
+     main = expression(paste("Moc testu w zależności od wariancji ", sigma^2, " (przy ", mu[1], " = 0.3, n = 50)")),
+     xlab = expression(sigma^2), ylab = "Moc testu", ylim = c(0, 1))
+```
+
+Na podstawie wygenerowanych krzywych teoretycznych można zaobserwować:
+
+- Zależność od $\mu_1$: Wykres przyjmuje kształt zbliżony do litery "U". Gdy badana średnia $\mu_1$ jest bliska zeru, moc testu jest równa poziomowi błędu $\alpha$. Im bardziej $\mu_1$ oddala się od zera w dowolną stronę, tym test skuteczniej wykrywa tę różnicę, a jego moc szybko dąży do 1.
+- Zależność od $n$: Przy stałych pozostałych parametrach, zwiększanie liczebności próby powoduje wzrost mocy testu.
+- Zależność od $\sigma^2$: Krzywa ta jest malejąca. Zwiększony rozrzut danych wprowadza do wyników znaczny szum. Test statystyczny ma przez to większe trudności z odróżnieniem rzeczywistej zmiany, co bezpośrednio skutkuje spadkiem jego mocy.
+
+
+\newpage 
+
+***  
+ 
+# **Zadanie 2**
+
+## a) Analiza graficzna poziomu cholesterolu na wykresach pudełkowych
+
+```{r zad2a, echo=FALSE}
+chol <- read.table("chol.txt", fill = TRUE, na.strings = c(".", ""), col.names = c("Grupa", "Dzien2", "Dzien4", "Dzien14"))
+
+z_dzien2  <- chol$Dzien2[chol$Grupa == 1]
+z_dzien4  <- chol$Dzien4[chol$Grupa == 1]
+z_dzien14 <- chol$Dzien14[chol$Grupa == 1]
+
+kontrolna <- chol$Dzien2[chol$Grupa == 2]
+
+
+par(mfrow = c(1, 1), mar = c(5, 5, 4, 2))
+
+boxplot(z_dzien2, z_dzien4, z_dzien14, kontrolna,
+        names = c("Zawał (2. dzień)", "Zawał (4. dzień)", "Zawał (14. dzień)", "Kontrolna"),
+        col = c("lightcoral", "lightcoral", "lightcoral", "lightgreen"),
+        main = "Porównanie poziomu cholesterolu",
+        ylab = "Poziom cholesterolu",
+        las = 1, cex.axis = 0.85)
+```
+Na podstawie wygenerowanych wykresów pudełkowych można zaobserwować dwa główne zjawiska dotyczące badanych grup:
+
+- U pacjentów po przebytym zawale serca zauważalna jest wyraźna tendencja spadkowa poziomu cholesterolu w czasie - mediany z 4. oraz 14. dnia po zawale są znacznie niższe niż w dniu 2.
+- Zestawienie tych danych z grupą kontrolną wskazuje, że pacjenci zawałowi charakteryzują się dużo wyższymi i bardziej rozproszonymi wynikami pomiarów niż osoby zdrowe.
+
+## b) Własna implementacja testu t dla dwóch prób niezależnych
+```{r zad2b, echo=FALSE}
+moj_test_welcha <- function(x, y) {
+  x <- na.omit(x)
+  y <- na.omit(y)
+  n1 <- length(x)
+  n2 <- length(y)
+  sr1 <- mean(x)
+  sr2 <- mean(y)
+  var1 <- var(x)
+  var2 <- var(y)
+  se <- sqrt(var1/n1 + var2/n2)
+  t_stat <- (sr1 - sr2) / se
+  licznik_df <- (var1/n1 + var2/n2)^2
+  mianownik_df <- ((var1/n1)^2 / (n1 - 1)) + ((var2/n2)^2 / (n2 - 1))
+  df <- licznik_df / mianownik_df
+  p_val <- 2 * (1 - pt(abs(t_stat), df))
+  return(list(t = t_stat, df = df, p_value = p_val))
+}
+
+wynik_moj_welch <- moj_test_welcha(z_dzien2, kontrolna)
+
+cat("Statystyka t:", wynik_moj_welch$t, "\n")
+cat("Stopnie swobody:", wynik_moj_welch$df, "\n")
+cat("p-value:", wynik_moj_welch$p_value, "\n")
+```
+
+## c) Porównanie własnej funkcji z wbudowanym poleceniem t.test()
+```{r zad2c, echo=FALSE}
+wynik_test <- t.test(z_dzien2, kontrolna)
+
+cat("Statystyka t:", wynik_test$statistic, "\n")
+cat("Stopnie swobody:", wynik_test$parameter, "\n")
+cat("p-value:", wynik_test$p.value, "\n")
+```
+
+Aby zweryfikować obserwacje poczynione na wykresach, przeprowadzono test statystyczny dla dwóch prób niezależnych używając testu t-Welcha.
+Uzyskana p-wartość jest skrajnie niska, co oznacza, że na poziomie istotności $\alpha = 0.05$ mamy pełne podstawy do odrzucenia $H_0$. Różnica w poziomie cholesterolu między pacjentami w 2. dniu po zawale a grupą kontrolną jest wysoce istotna statystycznie i nie jest wynikiem przypadku.
+Zestawiając własną, ręczną implementację wzorów matematycznych z wbudowaną funkcją t.test(), uzyskano co do ułamka identyczne wartości statystyki testowej, stopni swobody oraz p-wartości. Stanowi to ostateczne potwierdzenie poprawności obliczeń.
+
+# **Bibliografia**
+
+- [Dokumentacja języka R](https://pl.wikipedia.org/wiki/Weryfikacja_hipotez_statystycznych)
+- [Weryfikacja hipotez statystycznych](https://pl.wikipedia.org/wiki/Weryfikacja_hipotez_statystycznych)
+- [Test t-Welcha](https://pl.wikipedia.org/wiki/Test_t_Welcha)
