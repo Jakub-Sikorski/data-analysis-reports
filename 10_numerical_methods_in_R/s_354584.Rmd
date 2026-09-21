@@ -1,0 +1,332 @@
+---
+title: 'Znajdowanie miejsc zerowych metodą bisekcji oraz całkowanie numeryczne metodami: Monte Carlo i trapezów'
+author: "Jakub Sikorski 354584"
+date: "2025-06-04"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+header-includes:
+  - \renewcommand{\contentsname}{Spis treści}
+---
+\newpage  
+  
+  ***
+    
+#  **Cel raportu:**  
+Celem niniejszego raportu jest przedstawienie, porównanie oraz analiza trzech wybranych metod numerycznych: całkowania metodą trapezów, całkowania metodą Monte Carlo oraz wyznaczania miejsc zerowych funkcji za pomocą metody bisekcji. Każda z metod została zastosowana do odpowiednio dobranych funkcji, a następnie oceniono jej skuteczność, dokładność oraz wpływ kluczowych parametrów (takich jak liczba podziałów czy liczba losowań) na otrzymane wyniki. Raport ma na celu nie tylko zapoznanie czytelnika z zasadą działania każdej z metod, ale także ukazanie ich zalet, ograniczeń oraz przydatności w różnych zastosowaniach obliczeniowych.  
+  
+  
+#  **Metoda Bisekcji:**  
+##  **Opis metody:**  
+Metoda bisekcji (dzielenia przedziału na pół) służy do znajdowania miejsc zerowych funkcji. Zakłada, że funkcja zmienia znak na końcach przedziału i iteracyjnie dzieli go na pół, wybierając ten podprzedział, w którym zachodzi zmiana znaku, aż do osiągnięcia zadanej dokładności. Wzór którego będziemy używać do zawężania przedziału na którym pracujemy to: $$|a-b|>\varepsilon$$  
+
+Wykres opisujący tą metodę na przedziale [0,$\frac{\pi}{2}$] wygląda następująco:  
+
+```{r wykres_bisekcja,echo=F}
+sinus<-function(x){
+  sqrt(4*sin(x))-1.5
+}
+
+curve(sinus,from = 0, to = (pi/2),
+      col='hotpink',
+      xlab='x',
+      ylab='f(x)',
+      main=expression(f(x)==sqrt(4*sin(x)) - 1.5))
+
+abline(h=0,col='black', lty=5)
+```
+  
+
+
+  
+##  **Implementacja i wyniki:** 
+Kod wykonujący potrzebne nam obliczenia oraz zwracający wynik wygląda następująco:
+
+```{r wyniki_bisekcja, echo=T}   
+a<-0
+b<-pi/2
+e<-0.01
+sinus<-function(x){
+  sqrt(4*sin(x))-1.5
+}
+
+
+bisekcja<-function(a,b,e){
+  c<-c()
+  n<-0
+  while(abs(a-b)>e){
+    
+    if(sinus((a+b)/2)*sinus(a)< 0){
+      b<-(a+b)/2
+    }else{a<-(a+b)/2
+    }
+    n<-n+1
+  }
+  c[1]<-(a+b)/2
+  c[2]<-n
+  c
+}
+
+wynik1<-bisekcja(a,b,e)
+wynik1[1]
+```   
+Liczba iteracji potrzebnych do osiągnięcia punktu z dokładnością do $\varepsilon$ wynosi: `r wynik1[2]`.
+
+## **Wnioski:  **
+Posiadając już kod pozwalający nam obliczać przybliżone miejsca zerowe, możemy obliczyć je w zależności od naszego $\varepsilon$ oraz sprawdzić ile iteracji jest nam do tego potrzebnych. Poniższa tabela porównuje wyniki dla $\varepsilon=10^{-k}, k\in{3,4,5,6}$:
+```{r tabela1, echo=F}
+e3<-10^(-3)
+e4<-10^(-4)
+e5<-10^(-5) 
+e6<-10^(-6) 
+wynik3<-bisekcja(a,b,e3)
+wynik4<-bisekcja(a,b,e4)
+wynik5<-bisekcja(a,b,e5)
+wynik6<-bisekcja(a,b,e6)
+Wyniki<-c(wynik3[1],wynik4[1],wynik5[1],wynik6[1])
+Iteracje<-c(wynik3[2],wynik4[2],wynik5[2],wynik6[2])
+Wartosci_k<-c(3,4,5,6)
+
+
+tabela1<-data.frame(Wartosci_k,Wyniki,Iteracje)
+knitr::kable(tabela1,caption="Podsumowanie")
+
+```
+   
+##  **Podsumowanie:  **
+Metoda bisekcji jest bardzo stabilna i gwarantuje zbieżność, jeśli tylko funkcja spełnia warunek zmiany znaku na końcach przedziału. Jej główną zaletą jest niezawodność, natomiast wadą – stosunkowo wolna zbieżność w porównaniu do metod wykorzystujących pochodne (np. Newtona-Raphsona).
+  
+\newpage  
+
+***
+#   **Metoda Monte Carlo  **
+## **Opis metody:**  
+Metoda Monte Carlo opiera się na losowym próbkowaniu wartości funkcji w obrębie przedziału całkowania i uśrednianiu tych wyników. Przybliżona wartość całki jest proporcjonalna do średniej wartości funkcji oraz długości przedziału. Metoda ta wykorzystuje narzędzia rachunku prawdopodobieństwa i statystyki. Wzór ogólny prezentuje się następująco:  
+$$\int_{a}^{b}f(x)dx\approx (b-a)\frac{1}{N}\sum_{i=1}^{N}f(x_i)$$  
+$N$ - liczba losowo wygenerowanych punktów  
+$x_i \in [a,b]$ - losowe punkty  
+$f(x_i)$ - wartość funkcji w wylosowanym punkcie  
+$(b-a)$ - długość całkowanego przedziału  
+  
+Funkcja którą będziemy się zajmować określona jest wzorem $(x-4)^2(x-7)^2$ na przedziale [4,7] dla N = 1000. Ukazane jest to na poniższym wykresie:  
+```{r wykres2, echo=FALSE}
+a<-4
+b<-7
+fx<-function(x){
+  (x-4)^2 * (x-7)^2
+}
+x_los<-runif(1000,min = a,max = b)
+max_fx <- max(fx(x_los))
+y_los<-runif(1000,min = 0,max = max_fx)
+
+
+
+curve(fx,from = a, to = b,
+      col='red',
+      xlab='x',
+      ylab='f(x)',
+      main=expression(f(x)==(x-4)^2 * (x-7)^2))
+
+x_wart<-seq(4,7,length.out=30)
+y_wart<-fx(x_wart)
+polygon(c(4,x_wart,7),c(0,y_wart,0), col='hotpink')
+
+
+points(x_los,y_los,pch=20)
+
+```
+
+## **Implementacja i wyniki: ** 
+Kod korzystający z tej metody 10-cio krotnie (w celu zoptymalizowania wyników) dla $N=1000$ wygląda następująco:
+```{r wynikimc1, results='hide'}
+a<-4
+b<-7
+N1<-1000
+fx<-function(x){
+  (x-4)^2 * (x-7)^2
+}
+x_los<-runif(N1,min = a,max = b)
+max_fx <- max(fx(x_los))
+y_los<-runif(N1,min = 0,max = max_fx)
+srednia1<-c()
+for(j in 1:10){
+  wynikmc1<-0
+  x_los<-runif(N1,min = a,max = b)
+  y_los<-runif(N1,min = 0,max = max_fx)
+  for(i in 1:N1){
+    if(y_los[i]<=fx(x_los[i])){
+      wynikmc1<-wynikmc1+1
+    }
+  }
+  srednia1[j]<-wynikmc1
+}
+wynik1k<-(sum(srednia1)/10/N1)*(b-a)*max_fx
+```
+Jeśli chcemy, aby nasze wyniki były jeszcze dokładniejsze możemy zwiększyć nasze $N$, kod dla $N=10000$ prezentuje się tak:
+```{r wynikimc2, results='hide'}
+a<-4
+b<-7
+N2<-10000
+fx<-function(x){
+  (x-4)^2 * (x-7)^2
+}
+x_los<-runif(N2,min = a,max = b)
+max_fx <- max(fx(x_los))
+y_los<-runif(N2,min = 0,max = max_fx)
+srednia2<-c()
+for(j in 1:10){
+  wynikmc2<-0
+  x_los<-runif(N2,min = a,max = b)
+  y_los<-runif(N2,min = 0,max = max_fx)
+  for(i in 1:N2){
+    if(y_los[i]<=fx(x_los[i])){
+      wynikmc2<-wynikmc2+1
+    }
+  }
+  srednia2[j]<-wynikmc2
+}
+wynik10k<-(sum(srednia2)/10/N2)*(b-a)*max_fx
+```
+
+## **Wnioski: ** 
+Gdy mamy już kod generujący nam wyniki korzystając z metody Monte Carlo, możemy przyrównać je do wyniku otrzymanego z liczenia metodą analityczną, co przedstawia poniższa tabela:
+
+```{r tabela2, echo=F}
+Wyniki_N1000<-(srednia1/N1)*(b-a)*max_fx
+Wyniki_N10000<-(srednia2/N2)*(b-a)*max_fx
+
+tabela2<-data.frame(Wyniki_N1000,Wyniki_N10000)
+knitr::kable(tabela2,caption="Podsumowanie metody Monte Carlo")
+```
+
+```{r tabela2.1,echo=F}
+Srednia_N1000<-wynik1k
+Srednia_N10000<-wynik10k
+Wynik_analityczny<-8.1
+tabela2.1<-data.frame(Srednia_N1000,Srednia_N10000,Wynik_analityczny)
+knitr::kable(tabela2.1, caption = "Porównanie wyników")
+```
+
+## **Podsumowanie: ** 
+Monte Carlo jest bardzo uniwersalną metodą, szczególnie przydatną przy całkowaniu funkcji w wielu wymiarach. Choć jej dokładność rośnie wolno (proporcjonalnie do pierwiastka z liczby losowań), jest łatwa do zaimplementowania i skuteczna tam, gdzie inne metody zawodzą. Działa dobrze nawet dla funkcji nieciągłych lub trudnych do analitycznego opisania.
+
+\newpage  
+
+***
+#   **Metoda Trapezów **
+
+## **Opis metody: ** 
+Metoda trapezów to klasyczna technika numerycznego całkowania polegająca na przybliżeniu pola pod wykresem funkcji za pomocą sumy pól trapezów. Przedział całkowania dzielony jest na mniejsze podprzedziały (odcinki), a pole każdego z nich szacowane jest jako średnia arytmetyczna wartości funkcji na końcach przedziału pomnożona przez jego długość. Wzór ogólny tej metody wygląda następująco:
+$$\int_{a}^{b}f(x)dx\approx\frac{h}{2}(f(x_0)+2\sum_{i=1}^{n-1}f(x_i)+f(x_n))$$  
+
+$h=\frac{b-a}{n}$ - szerokość każdego podprzedziału  
+$x_0$ - a  
+$x_n$ - b  
+$x_i = a+i*h$ dla $i = 0,1,2,...,n$  
+  
+  
+Poniższy wykres przedstawia podział pola pod wykresem funkcji na 7 trapezów:  
+```{r wykres3,echo=FALSE}
+a<-4
+b<-7
+fx<-function(x){
+  (x-4)^2 * (x-7)^2
+}
+n<-7
+x<-seq(a,b,length.out=n+1)
+y<-fx(x)
+
+trapez<-function(a,b,n,fx){
+  h<-(b-a)/n
+  wyniktr<-(h/2)*(y[1]+2*sum(y[2:n]+y[n+1]))
+wyniktr
+}
+
+curve(fx,from = a, to = b,
+      col='black',
+      xlab='x',
+      ylab='f(x)',
+      main=expression(f(x)==(x-4)^2 * (x-7)^2))
+
+for (i in 1:n){
+  polygon(c(x[i],x[i],x[i+1],x[i+1]),
+          c(0,y[i],y[i+1],0),
+          col = 'pink', border = "hotpink")
+}
+
+```
+
+## **Implementacja i wyniki:  **
+Kod liczący podaną całkę przy użyciu metody trapezów przy podziale na $n$ równych odcinków wygląda następująco:
+```{r kodtrapez, results='hide'}
+a<-4
+b<-7
+fx<-function(x){
+  (x-4)^2 * (x-7)^2
+}
+n<-7
+x<-seq(a,b,length.out=n+1)
+y<-fx(x)
+
+trapez<-function(a,b,n,fx){
+  h<-(b-a)/n
+  wyniktr<-(h/2)*(y[1]+2*sum(y[2:n]+y[n+1]))
+wyniktr
+}
+trapez(a,b,n,fx)
+```
+Teraz możemy przekształcić ten kod tak, żebyśmy mogli dowiedzieć się na ile trapezów musimy podzielić pole pod wykresem, aby dokładność wyniku była $<\varepsilon$ dla $\varepsilon = 0.01$. Kod będzie wyglądał następująco:
+```{r kodtrapez2, results='hide'}
+a<-4
+b<-7
+fx<-function(x){
+  (x-4)^2 * (x-7)^2
+}
+n<-1
+e<-0.01
+trapez<-function(a,b,n,fx){
+  x<-seq(a,b,length.out=n+1)
+  y<-fx(x)
+  h<-(b-a)/n
+  wyniktr<-(h/2)*(y[1]+2*sum(y[2:n]+y[n+1]))
+  wyniktr
+}
+wynik<-trapez(a,b,n,fx)
+
+while(abs(8.1-wynik)>e){
+  n<-n+1
+  wynik<-trapez(a,b,n,fx)
+}
+
+```
+I dowiadujemy się z niego, że wynik z niepewnością rzędu $\varepsilon$ osiągamy dla $n=$ `r n`.  
+
+## **Wnioski:  **  
+Możemy zauważyć, że nasza metoda jest bardzo dokładna już przy dość niskiej liczbie podziałów, gdyż dla $n =$ `r n` wynik różni się o <`r e` od wyniku otrzymanego metodą analityczną.
+```{r tabela3, echo=FALSE}
+Wynik_dla_n3<-trapez(a,b,3,fx)
+Wynik_dla_n6<-trapez(a,b,6,fx)
+Wynik_dla_n9<-trapez(a,b,9,fx)
+Wynik_analityczny<-8.1
+
+tabela3<-data.frame(Wynik_dla_n3,Wynik_dla_n6,Wynik_dla_n9,Wynik_analityczny)
+knitr::kable(tabela3,caption = "Podsumowanie metody trapezów")
+```
+
+## **Podsumowanie: ** 
+Metoda trapezów charakteryzuje się dobrą dokładnością dla funkcji gładkich i dobrze przybliżalnych liniowo. Jest prosta do implementacji i szybka w działaniu, jednak dla funkcji silnie zakrzywionych lub oscylujących może wymagać dużej liczby podziałów, aby osiągnąć akceptowalną dokładność.  
+  
+\newpage  
+***  
+# **Bibliografia:**  
+[Metoda Bisekcji](https://pl.wikipedia.org/wiki/Metoda_równego_podziału)  
+[Całkowanie numeryczne](https://pl.wikipedia.org/wiki/Całkowanie_numeryczne)  
+[Metoda Monte Carlo](https://pl.wikipedia.org/wiki/Metoda_Monte_Carlo)  
+[Skomplikowane wzory w LaTeX](https://myszka.kmim.wm.pwr.edu.pl/project/markdown/zawartosc/rozvii/)  
+W celu pisania podsumowań oraz opisów metod wykorzystałem sztuczną inteligencję:  
+[ChatGPT](https://chatgpt.com)  
+[Qwen](https://chat.qwen.ai) 
+
+
